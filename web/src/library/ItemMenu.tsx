@@ -1,14 +1,26 @@
-import { ArrowDown, ArrowUp, Ellipsis, FolderInput, Pencil, Plus, Trash2 } from "lucide-react";
-import type { Item } from "../api/client";
+import {
+  ArrowDown,
+  ArrowUp,
+  Ellipsis,
+  FileDown,
+  FolderInput,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import type { Item, Kind } from "../api/client";
+import { useRequestExport } from "../exports/useRequestExport";
 import { messages } from "../messages";
 import { Menu, type MenuItem } from "../ui/Menu";
 import { useLibrary } from "./LibraryContext";
 import { CHILD_KINDS } from "./tree";
 
+const EXPORTABLE: readonly Kind[] = ["notebook", "page"];
 const ICON = { size: 16, "aria-hidden": true } as const;
 
 export function ItemMenu({ item }: { item: Item }) {
   const actions = useLibrary();
+  const requestExport = useRequestExport();
   const siblings = actions.library.children(item.parent_id);
   const index = siblings.findIndex(({ id }) => id === item.id);
 
@@ -18,8 +30,19 @@ export function ItemMenu({ item }: { item: Item }) {
     onSelect: () => actions.create(kind, item.id),
   }));
 
+  const exporting: MenuItem[] = EXPORTABLE.includes(item.kind)
+    ? [
+        {
+          label: messages.exports.action,
+          icon: <FileDown {...ICON} />,
+          onSelect: () => requestExport(item),
+        },
+      ]
+    : [];
+
   const items: MenuItem[] = [
     ...creation,
+    ...exporting,
     {
       label: messages.library.rename,
       icon: <Pencil {...ICON} />,

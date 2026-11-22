@@ -38,7 +38,7 @@ export function TrashView() {
   });
 
   return (
-    <section className="trash-view">
+    <section className="list-view">
       <header>
         <h1>{text.title}</h1>
         <p className="muted">{text.lead}</p>
@@ -46,11 +46,11 @@ export function TrashView() {
       {items?.length === 0 && (
         <EmptyState icon={<Trash2 size={32} />} title={text.empty} lead={text.emptyLead} />
       )}
-      <ul className="trash-list">
+      <ul className="row-list">
         {items?.map((item) => (
-          <li key={item.id} className="trash-row">
+          <li key={item.id} className="list-row">
             <KindIcon kind={item.kind} />
-            <div className="trash-name">
+            <div className="row-name">
               <span>{item.title}</span>
               <small className="muted">
                 {messages.kinds[item.kind]}

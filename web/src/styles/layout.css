@@ -421,28 +421,28 @@
   color: var(--ink);
 }
 
-.trash-view {
+.list-view {
   height: 100%;
   overflow-y: auto;
   padding: 56px clamp(20px, 6vw, 80px);
 }
 
-.trash-view h1 {
+.list-view h1 {
   font-family: var(--book);
   font-size: 36px;
   font-weight: 500;
 }
 
-.trash-view .empty-state {
+.list-view .empty-state {
   height: 60%;
 }
 
-.trash-list {
+.row-list {
   max-width: 720px;
   margin-top: 28px;
 }
 
-.trash-row {
+.list-row {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -450,10 +450,22 @@
   border-bottom: 1px solid var(--line);
 }
 
-.trash-name {
+.row-name {
   display: grid;
   flex: 1;
   min-width: 0;
+}
+
+.row-name progress {
+  width: min(260px, 100%);
+  height: 6px;
+  margin-top: 6px;
+  accent-color: var(--accent);
+}
+
+a.button {
+  color: inherit;
+  text-decoration: none;
 }
 
 @media (max-width: 860px) {

@@ -114,6 +114,24 @@ export const messages = {
     hint: "Find any page by what it says or what it means.",
   },
 
+  exports: {
+    title: "Exports",
+    lead: "Your PDF files are kept for 24 hours.",
+    empty: "No exports yet",
+    emptyLead: "Choose “Export as PDF” on a page or a notebook to make one.",
+    action: "Export as PDF",
+    started: (title: string) => `Preparing “${title}” – you will find it under Exports.`,
+    download: "Download",
+    progress: (title: string) => `Progress of ${title}`,
+    states: {
+      queued: "Waiting",
+      running: "Being prepared",
+      succeeded: "Ready",
+      failed: "Could not be prepared. Please try again.",
+      expired: "Expired",
+    },
+  },
+
   errors: {
     network: "The service cannot be reached. Check your connection and try again.",
     unexpected: "Something went wrong. Please try again.",

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronRight, FileDown, LogOut, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { NavLink } from "react-router";
 import { api, type Item, type User } from "../api/client";
@@ -51,6 +51,10 @@ export function Sidebar({ user, activeSectionId, onSearch }: Props) {
         ))}
       </ul>
       <div className="sidebar-footer">
+        <NavLink to="/exports" className="footer-link">
+          <FileDown size={16} aria-hidden="true" />
+          {messages.exports.title}
+        </NavLink>
         <NavLink to="/trash" className="footer-link">
           <Trash2 size={16} aria-hidden="true" />
           {messages.trash.title}
