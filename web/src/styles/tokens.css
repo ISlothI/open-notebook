@@ -1,0 +1,52 @@
+:root {
+  color-scheme: light;
+  --paper: #fbf8f3;
+  --sheet: #fffdf9;
+  --sidebar: #f3ede3;
+  --list: #f8f4ec;
+  --raised: #ffffff;
+  --ink: #1b2436;
+  --ink-soft: #5a6275;
+  --line: rgb(27 36 54 / 11%);
+  --hover: rgb(27 36 54 / 6%);
+  --selected: rgb(27 36 54 / 10%);
+  --accent: #c0361d;
+  --accent-strong: #a32c16;
+  --on-accent: #ffffff;
+  --accent-soft: rgb(192 54 29 / 12%);
+  --added: #dcefdc;
+  --added-ink: #1d5128;
+  --removed: #f9dfd9;
+  --removed-ink: #8a2413;
+  --shadow: 0 1px 2px rgb(27 36 54 / 6%), 0 12px 32px rgb(27 36 54 / 10%);
+  --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --book: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 10px;
+  --ease: 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #161922;
+    --sheet: #191d27;
+    --sidebar: #10131a;
+    --list: #13161e;
+    --raised: #222734;
+    --ink: #ece7dc;
+    --ink-soft: #a5abba;
+    --line: rgb(236 231 220 / 12%);
+    --hover: rgb(236 231 220 / 7%);
+    --selected: rgb(236 231 220 / 12%);
+    --accent: #ff8064;
+    --accent-strong: #ff9a83;
+    --on-accent: #1c0d08;
+    --accent-soft: rgb(255 128 100 / 16%);
+    --added: #1f3a28;
+    --added-ink: #b5e4c0;
+    --removed: #47231c;
+    --removed-ink: #ffc2b3;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 16px 40px rgb(0 0 0 / 45%);
+  }
+}

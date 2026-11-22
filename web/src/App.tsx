@@ -1,33 +1,58 @@
-import { useEffect, useState } from "react";
-import { fetchHealth } from "./health";
+import { useQuery } from "@tanstack/react-query";
+import { Route, Routes } from "react-router";
+import { ApiError, api } from "./api/client";
+import { AuthScreen } from "./auth/AuthScreen";
+import { PageView } from "./editor/PageView";
+import { LibraryProvider } from "./library/LibraryContext";
+import { messages } from "./messages";
+import { SectionView, Shell, Welcome } from "./Shell";
+import { TrashView } from "./trash/TrashView";
+import { errorText } from "./ui/toast";
 
-type ServiceState = "checking" | "ready" | "unavailable";
-
-const STATE_TEXT: Record<ServiceState, string> = {
-  checking: "Opening your notebook…",
-  ready: "Everything is ready.",
-  unavailable: "The service is not available right now. Please try again in a moment.",
-};
+async function fetchUser() {
+  try {
+    return await api.me();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return null;
+    }
+    throw error;
+  }
+}
 
 export function App() {
-  const [state, setState] = useState<ServiceState>("checking");
+  const { data: user, error, refetch } = useQuery({ queryKey: ["me"], queryFn: fetchUser });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchHealth(controller.signal)
-      .then((health) => setState(health.status === "ok" ? "ready" : "unavailable"))
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setState("unavailable");
-        }
-      });
-    return () => controller.abort();
-  }, []);
-
+  if (user === undefined) {
+    return (
+      <main className="centered">
+        {error ? (
+          <>
+            <p role="alert">{errorText(error)}</p>
+            <button type="button" className="button" onClick={() => refetch()}>
+              {messages.retry}
+            </button>
+          </>
+        ) : (
+          <p className="muted">{messages.loading}</p>
+        )}
+      </main>
+    );
+  }
+  if (user === null) {
+    return <AuthScreen />;
+  }
   return (
-    <main>
-      <h1>Open Notebook</h1>
-      <p role="status">{STATE_TEXT[state]}</p>
-    </main>
+    <LibraryProvider>
+      <Routes>
+        <Route element={<Shell user={user} />}>
+          <Route index element={<Welcome />} />
+          <Route path="section/:sectionId" element={<SectionView />} />
+          <Route path="page/:pageId" element={<PageView />} />
+          <Route path="trash" element={<TrashView />} />
+          <Route path="*" element={<Welcome />} />
+        </Route>
+      </Routes>
+    </LibraryProvider>
   );
 }

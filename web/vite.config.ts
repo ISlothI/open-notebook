@@ -8,5 +8,10 @@ export default defineConfig({
     allowedHosts: ["localhost"],
     hmr: { protocol: "wss", clientPort: 9443 },
   },
-  test: { environment: "jsdom", restoreMocks: true, fsModuleCache: false },
+  test: {
+    environment: "jsdom",
+    restoreMocks: true,
+    fsModuleCache: false,
+    include: ["src/**/*.test.{ts,tsx}"],
+  },
 });
