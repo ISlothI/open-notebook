@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Key decisions (D1–D4) confirmed; plan under review |
+| Status | Decisions D1–D7 confirmed; simplified after phase 0 (D7) |
 | Date | 2026-11-22 |
 | Scope | Design of the application and of the complete DevOps process |
 
@@ -82,8 +82,8 @@ flowchart LR
 |---|---|---|
 | `web` | React, TypeScript, Vite; served statically from a non-root container | Rich editor UI, independently scalable and cacheable |
 | `api` | Python, FastAPI, SQLAlchemy, Alembic | Typed, produces an OpenAPI contract; Python also has the search and PDF ecosystem |
-| `worker` | Same Python codebase, separate entry point and image | Slow work does not block the API; scales and fails separately |
-| `embedder` | ONNX Runtime, `multilingual-e5-small` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
+| `worker` | Same image as `api`, different command | Slow work does not block the API; scales and fails separately |
+| `embedder` | Same image, different command; ONNX Runtime, `multilingual-e5-small` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
 | Data | PostgreSQL with pgvector | Durable data, full-text index, vectors and job queue in **one** transactional system |
 
 ### 4.1 Main decisions (to be written as ADRs)
@@ -91,10 +91,10 @@ flowchart LR
 | ADR | Decision | Rejected alternative and reason |
 |---|---|---|
 | 0001 | Monorepo | Several repositories: only synchronisation overhead for one person |
-| 0002 | Modular Python core with two entry points | Microservices: no independent teams or release cadence |
+| 0002 | One modular Python codebase and image, three processes (api, worker, embedder) | Microservices: no independent teams or release cadence; separate images would triple building, scanning and signing |
 | 0003 | PostgreSQL job queue (`SKIP LOCKED`, leases) | Redis/RabbitMQ: extra state and memory; loses the shared transaction with the save |
 | 0004 | pgvector and PostgreSQL FTS, RRF fusion | Elasticsearch/Qdrant: exceeds the memory budget, causes dual writes |
-| 0005 | Separate embedder service | Model inside api and worker: double memory, no clean failure boundary |
+| 0005 | Separate embedder process | Model inside api and worker: double memory, no clean failure boundary |
 | 0006 | PDF with WeasyPrint | Headless Chromium: large image and memory; WeasyPrint natively supports a paginated table of contents |
 | 0007 | Finished PDFs in PostgreSQL with expiry, behind a port | Object storage: a separate stateful system for short-lived small files. The port allows switching to S3 |
 | 0008 | Flux CD | Argo CD: higher memory use because of its UI. Flux natively verifies cosign signatures, handles dependencies and automatic rollback |
@@ -106,14 +106,14 @@ flowchart LR
 
 ### 4.2 Code structure
 
-The backend uses ports and adapters; dependencies always point inwards, enforced in CI by an `import-linter` rule.
+The backend uses ports and adapters; dependencies always point inwards. Ports exist only where a test substitute or a second implementation is needed.
 
 ```text
 domain/          entities, value objects, rules (pure Python)
 application/     use cases, ports (Protocol): PageRepository, JobQueue,
                  EmbeddingProvider, DocumentRenderer, ArtifactStore, Clock
 infrastructure/  adapters: postgres, embedder client, weasyprint
-entrypoints/     api (FastAPI), worker, cli (migration, admin)
+entrypoints/     api (FastAPI), worker, embedder
 ```
 
 A new export or job type is added by registering a handler, without changing the processing loop (open/closed principle).
@@ -192,18 +192,17 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 .
 ├── CLAUDE.md  README.md  Makefile  VERSION
 ├── .github/workflows/
-├── backend/            Python: api, worker (src/, tests/, migrations/, uv.lock)
-├── embedder/           Python: ONNX service
+├── backend/            Python: api, worker, embedder (src/, tests/, migrations/, uv.lock)
 ├── web/                React application, Playwright tests
 ├── compose/            development environment, reverse proxy
 ├── deploy/
-│   ├── charts/         open-notebook (application), open-notebook-data (PostgreSQL, backup)
+│   ├── chart/          Helm chart: application, PostgreSQL, backup
 │   ├── platform/       observability
 │   ├── envs/           staging/, prod/   ← the desired state
 │   └── flux/           Flux sources and dependencies
 ├── infra/
 │   ├── ansible/        host preparation, k3d, operations playbooks
-│   └── tofu/           cluster/, github/
+│   └── tofu/           cluster base
 ├── observability/      rules, dashboards, promtool tests
 ├── load/               k6 scenarios
 ├── tools/toolbox/      image with pinned tools
@@ -219,10 +218,9 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 | Level | What it proves | Tool |
 |---|---|---|
 | Unit | domain and application rules | pytest, Vitest |
-| Architecture | dependency direction | import-linter |
 | Integration | real PostgreSQL: queue, lease, transaction, search, ownership filtering | pytest with a service container |
-| Contract | the API matches its OpenAPI description; the client is generated from it | Schemathesis, generated TypeScript client |
-| Migration | from an empty database and from the previous release; old code on the new schema | Alembic, compatibility test |
+| Contract | the web client matches the API; CI fails if the generated types are stale | TypeScript types generated from OpenAPI |
+| Migration | from an empty database; models and migrations agree | Alembic |
 | Search quality | recall@5 and MRR thresholds | fixed sample set |
 | E2E | F1–F4, R3 and accessibility | Playwright, axe |
 | Deployment | chart validity, security settings | helm lint, kubeconform, Trivy config |
@@ -235,12 +233,10 @@ Coverage thresholds: domain and application layers 90%, backend overall 80%.
 
 | Workflow | Trigger | Task |
 |---|---|---|
-| `ci` | PR, manual | lint, types, tests, image build, scanning, E2E; aggregated required check |
-| `security` | PR, weekly | CodeQL, gitleaks, dependency and image scanning |
-| `clean-room` | PR (touching deployment), weekly | full reproduction from scratch |
-| `release` | push to `main` | build, scan, SBOM, signing, chart, staging PR |
+| `ci` | PR, weekly | gates, lint, types, tests, image build, vulnerability scanning, E2E |
+| `clean-room` | PR (touching deployment), weekly | cluster from scratch, smoke test, backup–restore exercise |
+| `release` | push to `main` | build, scan, SBOM, signing, chart, staging version update |
 | `promote` | manual | prod PR with the same chart version, release notes |
-| `drill` | manual, monthly | backup, destruction, restore, RTO/RPO measurement |
 
 Test results, coverage, Playwright traces, SBOMs and scan reports are available as CI artifacts.
 
@@ -254,11 +250,11 @@ flowchart LR
   I --> C[cosign keyless signature<br/>SBOM and provenance attestation]
   C --> H[Helm chart<br/>with embedded image digests]
   H --> HS[signed chart in GHCR]
-  HS --> PR[staging PR]
-  PR --> F[Flux: verify signature, deploy]
+  HS --> ST[staging version commit]
+  ST --> F[Flux: verify signature, deploy]
 ```
 
-- **Version:** `VERSION` (MAJOR.MINOR) plus the run number, e.g. `0.1.57`. Every merge to main is a full release candidate; promotion does not rebuild.
+- **Version:** `VERSION` (MAJOR.MINOR) plus the run number, e.g. `0.1.57`. Every application change merged to main is a full release candidate; promotion does not rebuild.
 - **Chain of trust:** Flux accepts only charts signed by this repository's `release` workflow; the chart pins images by digest, so the verification extends to them.
 - **Gates:** a fixable HIGH/CRITICAL vulnerability stops the release; exceptions need a justification and an expiry date.
 - **Negative evidence:** an attempt to deploy an unsigned chart fails, and this is documented.
@@ -274,17 +270,15 @@ flowchart LR
 |---|---|---|
 | Address | `https://staging.open-notebook.localhost:8443` | `https://open-notebook.localhost:8443` |
 | api replicas | 1 | 2 with PodDisruptionBudget |
-| Update | automatic PR after a successful release | manual promotion with an approved PR |
+| Update | automatic commit after a successful release | manual promotion with an approved PR |
 | Backup | none (sample data) | hourly |
 
 **Release process**
-1. The `release` workflow opens a PR that raises the chart version in `deploy/envs/staging`. Its checks are started by `workflow_dispatch` (a PR opened with `GITHUB_TOKEN` does not start workflows by itself), then it merges automatically. No personal token or rule bypass is needed.
-2. Flux deploys: data chart → migration Job → application → Helm test (a short version of F1).
-3. The `promote` workflow raises the same version in a prod PR; it first checks the signature and the successful staging state.
+1. The `release` workflow commits the new chart version to `deploy/envs/staging`. A push made with `GITHUB_TOKEN` starts no new workflow, so there is no loop and no extra credential.
+2. Flux verifies the chart signature and deploys it. An init container migrates the database under an advisory lock before the api starts.
+3. The `promote` workflow opens a PR that sets the same version in `deploy/envs/prod`, after checking the signature. Merging it is the approval.
 
-The automatic staging merge is the only exception to "the student merges into `main`": it changes only the staging version and is enabled after the student approves the phase 8 PR.
-
-**Rollback.** Automatic: if an upgrade or Helm test fails, Flux rolls back to the previous release. Manual: `git revert` of the promotion commit. Both are exercised with a deliberately broken release. The database is not rolled back: thanks to expand/contract migrations the previous version runs on the new schema, and a backup is taken automatically before migrating.
+**Rollback.** Automatic: if the new pods do not become ready, Flux rolls back to the previous release. Manual: `git revert` of the version commit. Both are exercised with a deliberately broken release. The database is not rolled back: thanks to expand/contract migrations the previous version runs on the new schema.
 
 **Drift handling.** After a manual `kubectl scale`, Flux restores the desired state; the experiment is recorded as evidence.
 
@@ -293,24 +287,22 @@ The automatic staging merge is the only exception to "the student merges into `m
 | Layer | Tool | Responsibility | Proof of reproducibility |
 |---|---|---|---|
 | Host | Ansible | prerequisites, local CA and certificate, directories, k3d cluster from declarative config; backup, restore and DR playbooks | second run is `changed=0`, checked in CI |
-| Cluster base | OpenTofu `cluster` | namespaces, quotas, Pod Security, secrets, TLS, Flux installation | `plan -detailed-exitcode` = 0 after apply |
-| GitHub | OpenTofu `github` | branch protection, environments, repository settings | `plan` without differences |
+| Cluster base | OpenTofu | namespaces, quotas, Pod Security, secrets, TLS, Flux installation | `plan -detailed-exitcode` = 0 after apply |
 | Application | Flux, Helm | everything running in the namespaces | Flux `Ready`, drift experiment |
 
-The OpenTofu state is local and gitignored: there is one user, the cluster is disposable, and remote storage would be an external dependency. The provider lockfile is committed with hashes for several platforms. Modules are checked with `tofu test` and Trivy.
+The OpenTofu state is local and gitignored: there is one user, the cluster is disposable, and remote storage would be an external dependency. The provider lockfile is committed with hashes for several platforms. The code is checked with `tofu validate` and Trivy.
 
 ## 13. Observability and SLOs
 
 - **Metrics:** HTTP RED; queue depth, age, duration and outcome; search mode and time per stage; embedder time; export outcome; PostgreSQL connections; `build_info` with version.
 - **Logs:** JSON with uniform fields (`ts, level, service, version, env, request_id, job_id, event`). The `request_id` can be followed from the browser to the background job. Note content and search terms are **not** logged.
-- **Dashboards as code:** service overview, SLO and error budget, job queue, releases.
+- **Dashboards as code:** service overview, SLO and error budget, job queue.
 - **Alerts:** multi-window error budget burn, queue age, `dead` jobs, stale backup; each with a runbook link and a promtool test. Notifications appear locally on the Prometheus/Grafana UI; there is no external channel.
 
 | SLI | SLO (28 days, initial target) |
 |---|---|
 | Ratio of non-5xx API responses | 99.5% |
 | Search under 500 ms | 95% |
-| Save under 300 ms | 99% |
 | Searchable within 30 s of saving | 95% |
 | Export successful within 60 s | 98% |
 
@@ -319,7 +311,7 @@ Targets are finalised after the load measurement. A short-lived local cluster do
 ## 14. Reliability and recovery
 
 - **Load (k6):** baseline, peak, soak; thresholds are the SLOs. Identify the saturation point and bottleneck, with at most one measurement-based improvement and before/after data.
-- **Failure exercises:** R1, R2, database restart, faulty release, exhausted quota. Each has a hypothesis, execution, detection, impact and recovery time.
+- **Failure exercises:** R1, R2, database restart, faulty release. Each has a hypothesis, execution, detection, impact and recovery time.
 - **Backup:** hourly `pg_dump` with checksum, into a directory outside the cluster (it survives cluster deletion); 24 hourly and 7 daily copies are kept.
 - **Targets:** RPO ≤ 1 hour, RTO ≤ 15 minutes, with measured results.
 - **DR exercise:** known dataset → backup → delete cluster → `make cluster` → restore → matching row counts and content hashes → smoke test of search and version restore. The search index is derived data, so it can be rebuilt.
@@ -331,7 +323,7 @@ Targets are finalised after the load measurement. A short-lived local cluster do
 The AI designs and codes, the student decides and accepts, and automated gates verify independently of both.
 
 - **Guidance:** `CLAUDE.md` as a versioned work instruction; significant decisions in ADRs.
-- **Verification:** every AI change passes the same gates; the student reviews a PR per phase and records remarks in it.
+- **Verification:** every AI change passes the same gates; CI must be green before merging. The student sets the goals, takes the decisions and reviews when they choose to; delegated merges are recorded as such.
 - **Log:** `docs/ai/log.md` – task, proposal, decision, verification, mistake found and its fix.
 - **Summary:** `docs/ai/summary.md` – what it was good for, where it erred, which gate caught which error, what had to be overruled by human decision.
 - **Privacy:** the AI receives no credentials; personal data does not enter the repository; the log contains only human reviews that really happened.
@@ -380,7 +372,7 @@ Metrics and structured logs are part of the code from phase 1; phase 9 adds thei
 | Scope too large for one person | working state after each phase; visual extras come after core functions |
 | The editor distorts Markdown | early spike with round-trip tests, fallback ready |
 | Model download unavailable | pinned by revision and SHA-256, built into the image; no download at run time |
-| The automatic staging PR mechanism does not work as expected | spike at the start of phase 8; fallback: manually merged PR |
+| Protection rules block the automatic staging commit | `main` only forbids force-push and deletion; fallback: PR |
 | Provider support for write-only secrets | spike at the start of phase 7; fallback: in-cluster generator Job |
 | Versions becoming outdated during the project | Dependabot, official check at the start of each phase |
 
@@ -391,11 +383,13 @@ Metrics and structured logs are part of the code from phase 1; phase 9 adds thei
 | D1 | Sign-in, which the specification does not mention | Yes, minimal: e-mail, password, session |
 | D2 | UI, code and documentation language | English |
 | D3 | Toolbox container instead of host-installed tools | Yes |
-| D4 | Standing permission to push branches and open PRs | Yes; merging into `main` is done by the student |
+| D4 | Standing permission to push branches and open PRs | Yes; extended to merging after phase 0 |
 | D5 | AI attribution lines in commits | Not allowed; AI usage is documented in `docs/ai/` |
+| D6 | Who merges | The assistant may merge when the checks are green |
+| D7 | Guiding priority | Meeting the requirements fully, with the simplest implementation that does so |
 
 | # | Manual step on a UI | When |
 |---|---|---|
 | M1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | the student is reminded before phase 7 |
 | M2 | Visibility of GHCR packages: Public | after the first release (phase 6) |
-| M3 | PR review and merge | at the end of every phase |
+| M3 | PR review (optional, but it is evidence for G10) | at any time |

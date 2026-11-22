@@ -2,6 +2,8 @@
 
 University assignment for the "Cloud and DevOps Basics" practical course: a OneNote-like note-taking application with a reproducible development and operations process built around it. **What is graded is primarily the DevOps process and its evidence**, but the application itself must also have the quality of a paid product.
 
+**Top priority: meet every requirement fully, with the simplest implementation that does so.** Do not add tools, layers or features that no requirement needs.
+
 The detailed plan is [docs/project-plan.md](docs/project-plan.md). If code and plan disagree, fix one of them; the discrepancy must not stay.
 
 ## 1. Requirements
@@ -53,7 +55,7 @@ Approved addition: minimal sign-in (e-mail, password, session). Anything beyond 
 - **Before phase 7, remind the student** to raise Docker Desktop memory to 5 GB, and wait for confirmation.
 - **Commit regularly**, in small, self-contained, green units.
 - **No AI attribution in commits or PRs**: no `Co-Authored-By`, "Generated with" or similar line. AI usage is documented in `docs/ai/` instead.
-- Pushing branches and opening PRs is allowed. **Merging into `main` is done by the student.** Other remote changes (repository settings, deletions, force-push) need permission.
+- Pushing, pulling, opening and merging PRs is allowed. **Merge only when all checks are green**, as a merge commit (evidence refers to commit SHAs). Other remote changes (repository settings, deletions, force-push) need permission.
 - **Privacy**: the repository is public; the student's personal data (e-mail, local paths) must not get into files, logs or evidence. Commits use the GitHub noreply address set in the clone's local git config.
 - **Resource limits**: 8 GB RAM, about 3.8 GiB for the Docker VM, about 27 GB free disk. Recalculate the plan's memory budget before adding a component.
 - Delete a Docker volume, image or cluster only if it belongs to this project. The machine holds other projects' volumes: **`docker system prune` and `docker volume prune` are forbidden.**
@@ -86,7 +88,7 @@ Approved addition: minimal sign-in (e-mail, password, session). Anything beyond 
 4. **Conventional Commits**: `type(scope): imperative summary`.
    - Types: `feat fix refactor perf test docs build ci chore revert`
    - Scopes: `api worker embedder web db deploy infra ci obs security docs`
-5. At the end of a phase, prove every "Done when" item with an **executed command**, store the output under `docs/evidence/`, update the status table of the plan and the AI log, then open a PR.
+5. At the end of a phase, prove every "Done when" item with an **executed command**, store the output under `docs/evidence/`, update the status table of the plan and the AI log, then open a PR and merge it when green.
 6. Important decisions get an ADR: `docs/adr/NNNN-title.md` (context, decision, alternatives, consequences).
 
 ## 6. Evidence and honesty

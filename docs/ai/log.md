@@ -18,6 +18,16 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 |---|---|
 | Task | Toolbox image, gates, git hooks, documentation skeleton |
 | AI proposal | Split the toolbox into `lint` and `ops` targets instead of one large image |
-| Human decision | Pending: review of the phase 0 PR |
+| Human decision | The student merged PR #2 (no written remarks), then delegated later merges to the assistant and asked for the simplest implementation that meets the requirements |
 | Verification | Versions and checksums taken from official releases (GitHub asset digests; for gitleaks, actionlint and hadolint also compared with the published checksum files); clean-clone run; negative tests ([evidence](../evidence/phase-00-foundation.md)) |
 | AI mistakes found | The first hadolint checksum URL was guessed and did not exist; the correct file was then found in the release's asset list. shellcheck publishes no checksum file, so its value rests on the GitHub digest only |
+
+## 2026-11-22 – Plan simplification
+
+| | |
+|---|---|
+| Task | Reduce the plan after the student judged that it must not be overcomplicated |
+| AI proposal | One backend image instead of three, one chart instead of two, direct staging commit instead of a self-approving PR, no OpenTofu module for GitHub, fewer workflows, test tools and SLOs |
+| Human decision | The priority was set by the student; the individual cuts were chosen by the assistant |
+| Verification | Every grading area still has a section and evidence in the traceability table |
+| AI mistakes found | The first plan was oversized: it contained tools that no requirement needed |
