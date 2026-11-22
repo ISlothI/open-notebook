@@ -1,0 +1,31 @@
+# Development overrides: source mounts and hot reload.
+services:
+  api:
+    image: open-notebook-backend:dev
+    build: { target: dev }
+    command: ["uvicorn", "--factory", "open_notebook.entrypoints.api.main:build", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/src", "--no-access-log"]
+    volumes: ["../backend/src:/app/src:ro"]
+
+  worker:
+    image: open-notebook-backend:dev
+    build: { target: dev }
+    volumes: ["../backend/src:/app/src:ro"]
+
+  migrate:
+    image: open-notebook-backend:dev
+    build: { target: dev }
+    volumes: ["../backend/migrations:/app/migrations:ro"]
+
+  web:
+    image: open-notebook-web:dev
+    build: { target: dev }
+    read_only: false
+    volumes:
+      - ../web/src:/app/src:ro
+      - ../web/index.html:/app/index.html:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+
+  proxy:
+    environment:
+      WEB_UPSTREAM: web:5173

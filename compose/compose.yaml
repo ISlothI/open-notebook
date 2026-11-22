@@ -1,0 +1,121 @@
+# The complete application with production images, behind a TLS reverse proxy.
+name: open-notebook
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: [/tmp]
+  restart: unless-stopped
+
+x-backend: &backend
+  <<: *hardening
+  image: open-notebook-backend:local
+  build:
+    context: ../backend
+    target: runtime
+  environment: &backend-environment
+    ON_ENVIRONMENT: compose
+    ON_DATABASE_HOST: db
+    ON_DATABASE_NAME: open_notebook
+    ON_DATABASE_USER: open_notebook
+    ON_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
+
+services:
+  db:
+    image: pgvector/pgvector:pg18-trixie@sha256:ab49524d18df7200b74ac9a475e1db6297fc1eb57da4c214c63d10ecc4b754fa
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: open_notebook
+      POSTGRES_USER: open_notebook
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
+    volumes: ["db-data:/var/lib/postgresql"]
+    networks: [data]
+    healthcheck:
+      # TCP, because during initialisation only the socket is served.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "open_notebook"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    networks: [data]
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    <<: *backend
+    networks: [data, edge]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    <<: *backend
+    command: ["open-notebook-worker"]
+    networks: [data]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:9100/metrics', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  web:
+    <<: *hardening
+    image: open-notebook-web:local
+    build: ../web
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  proxy:
+    image: caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    environment:
+      WEB_UPSTREAM: web:8080
+    ports: ["127.0.0.1:9443:9443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy-data:/data
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+      web: { condition: service_healthy }
+
+  smoke:
+    profiles: [smoke]
+    image: open-notebook-backend:dev
+    build:
+      context: ../backend
+      target: dev
+    # Shares the proxy's network to use the real host name, and its volume to verify TLS.
+    network_mode: service:proxy
+    user: "0:0"
+    environment:
+      SMOKE_BASE_URL: https://localhost:9443
+      SMOKE_CA_FILE: /proxy-data/caddy/pki/authorities/local/root.crt
+    volumes: ["proxy-data:/proxy-data:ro"]
+    command: ["pytest", "-q", "-p", "no:cacheprovider", "tests/smoke"]
+
+networks:
+  edge:
+  data:
+    internal: true
+
+volumes:
+  db-data:
+  proxy-data:

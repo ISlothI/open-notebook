@@ -1,0 +1,38 @@
+# Integration tests against a throw-away PostgreSQL.
+name: open-notebook-test
+
+services:
+  db:
+    image: pgvector/pgvector:pg18-trixie@sha256:ab49524d18df7200b74ac9a475e1db6297fc1eb57da4c214c63d10ecc4b754fa
+    environment:
+      POSTGRES_DB: test
+      # The database exists only during the test run and is not reachable from outside.
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: test
+    tmpfs: [/var/lib/postgresql]
+    networks: [test]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    image: open-notebook-backend:dev
+    build:
+      context: ../backend
+      target: dev
+    environment:
+      ON_ENVIRONMENT: test
+      ON_DATABASE_HOST: db
+      ON_DATABASE_NAME: test
+      ON_DATABASE_USER: test
+      ON_DATABASE_PASSWORD: unused
+    command: ["pytest", "-q", "-p", "no:cacheprovider", "tests/integration"]
+    networks: [test]
+    depends_on:
+      db: { condition: service_healthy }
+
+networks:
+  test:
+    internal: true
