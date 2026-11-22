@@ -323,7 +323,7 @@ Targets are finalised after the load measurement. A short-lived local cluster do
 The AI designs and codes, the student decides and accepts, and automated gates verify independently of both.
 
 - **Guidance:** `CLAUDE.md` as a versioned work instruction; significant decisions in ADRs.
-- **Verification:** every AI change passes the same gates; CI must be green before merging. The student sets the goals, takes the decisions and reviews when they choose to; delegated merges are recorded as such.
+- **Verification:** every AI change passes the same gates; CI must be green before merging. The student sets the goals and takes the decisions; because this is a one-person project, merges are delegated and recorded as such, and no review comments are kept.
 - **Log:** `docs/ai/log.md` – task, proposal, decision, verification, mistake found and its fix.
 - **Summary:** `docs/ai/summary.md` – what it was good for, where it erred, which gate caught which error, what had to be overruled by human decision.
 - **Privacy:** the AI receives no credentials; personal data does not enter the repository; the log contains only human reviews that really happened.
@@ -392,4 +392,3 @@ Metrics and structured logs are part of the code from phase 1; phase 9 adds thei
 |---|---|---|
 | M1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | the student is reminded before phase 7 |
 | M2 | Visibility of GHCR packages: Public | after the first release (phase 6) |
-| M3 | PR review (optional, but it is evidence for G10) | at any time |
