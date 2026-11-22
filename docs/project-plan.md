@@ -142,7 +142,7 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 | `page_versions` | append-only: `page_id, number, title, content_md, content_hash, restored_from` |
 | `search_chunks` | `page_id, ordinal, title, text, tsv, embedding vector(384)` |
 | `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, error, request_id` |
-| `exports` | `job_id, scope_node_id, state, artifact, expires_at` |
+| `exports` | `owner_id, item_id, title, snapshot, state, progress, artifact, expires_at` |
 
 **Hierarchy.** A folder lives in a folder or at the root; a notebook in a folder or at the root; a section in a notebook; a page in a section. A composite foreign key (`parent_id, parent_kind`) and a `CHECK` enforce this; the use case checks for cycles under a lock.
 
@@ -170,7 +170,7 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 
 **Search quality.** A fixed Hungarian/English sample set; CI fails if recall@5 or MRR drops below the threshold.
 
-**PDF export.** `queued → running (progress %) → succeeded | failed → expired`. Markdown → HTML (raw HTML disabled, output sanitised) → WeasyPrint. Cover, table of contents with page numbers, PDF bookmarks, running header. The renderer **may not load any external resource** (SSRF protection). The download link is signed and expires; a cleanup job deletes the file. The content is a snapshot of the versions at the time of the request.
+**PDF export.** `queued → running (progress %) → succeeded | failed → expired`. Markdown → HTML (raw HTML disabled, output sanitised) → WeasyPrint. Cover, table of contents with page numbers, PDF bookmarks, running header. The renderer **may not load any external resource** (SSRF protection). The download link is protected by the session and expires; the cleanup deletes the file. The content is a snapshot of the versions at the time of the request.
 
 ## 7. User experience and identity
 
@@ -260,7 +260,7 @@ flowchart LR
 - **Negative evidence:** an attempt to deploy an unsigned chart fails, and this is documented.
 - **Updates:** Dependabot for Python, npm, Docker and Actions dependencies.
 
-**Secrets.** There is no long-lived secret in Git or GitHub Secrets: GHCR uses the runtime `GITHUB_TOKEN`, signing uses OIDC. OpenTofu generates database passwords, the signing key and the Grafana password as ephemeral values through write-only attributes, so they do not enter the state either. Rotation: increase the revision and restart; with an exercised runbook. gitleaks runs before commits and on the full history in CI.
+**Secrets.** There is no long-lived secret in Git or GitHub Secrets: GHCR uses the runtime `GITHUB_TOKEN`, signing uses OIDC. OpenTofu generates database passwords and the Grafana password as ephemeral values through write-only attributes, so they do not enter the state either. Rotation: increase the revision and restart; with an exercised runbook. gitleaks runs before commits and on the full history in CI.
 
 ## 11. Deployment, environments, GitOps
 

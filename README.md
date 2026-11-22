@@ -2,7 +2,7 @@
 
 A structured, Markdown-based note-taking application with page versions, trash, hybrid search and PDF export, built together with a reproducible development and operations process.
 
-> **Status:** under development, see the [project plan](docs/project-plan.md). This README describes only what already works: accounts, the library, the page editor, versions, trash and search.
+> **Status:** under development, see the [project plan](docs/project-plan.md). This README describes only what already works: accounts, the library, the page editor, versions, trash, search and PDF export.
 
 ## Prerequisites
 
