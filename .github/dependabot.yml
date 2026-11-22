@@ -13,6 +13,10 @@ updates:
     schedule: { interval: monthly }
     groups:
       npm: { patterns: ["*"] }
+    ignore:
+      # The generator of the api types supports only TypeScript 5.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     commit-message: { prefix: "build" }
 
   - package-ecosystem: docker
@@ -20,6 +24,10 @@ updates:
     schedule: { interval: monthly }
     groups:
       images: { patterns: ["*"] }
+    ignore:
+      # The Python version is also fixed in the backend's lockfile; raised together by hand.
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
     commit-message: { prefix: "build" }
 
   - package-ecosystem: github-actions

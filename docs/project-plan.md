@@ -340,7 +340,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☑ [evidence](evidence/phase-03-user-interface.md) |
 | 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☑ [evidence](evidence/phase-04-search.md) |
 | 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☑ [evidence](evidence/phase-05-pdf-export.md) |
-| 6 | Supply chain | multi-platform images, scanning, SBOM, signing, chart publishing | `cosign verify` succeeds; unsigned artifact fails | ☐ |
+| 6 | Supply chain | multi-platform images, scanning, SBOM, signing, chart publishing | `cosign verify` succeeds; unsigned artifact fails | ☑ [evidence](evidence/phase-06-supply-chain.md) |
 | 7 | Kubernetes | charts, k3d, Ansible, OpenTofu, NetworkPolicy | `make cluster` works from scratch; second run makes no changes | ☐ |
 | 8 | GitOps | Flux, staging/prod, promotion, rollback | faulty release rolls back automatically; `git revert` exercised | ☐ |
 | 9 | Observability | metrics, logs, dashboards, SLOs, alerts | promtool green; one request can be traced through the logs | ☐ |
@@ -391,4 +391,3 @@ Metrics and structured logs are part of the code from phase 1; phase 9 adds thei
 | # | Manual step on a UI | When |
 |---|---|---|
 | M1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | the student is reminded before phase 7 |
-| M2 | Visibility of GHCR packages: Public | after the first release (phase 6) |
