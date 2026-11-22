@@ -101,6 +101,19 @@ export const messages = {
     chooseLead: "Its original place is in the trash as well.",
   },
 
+  search: {
+    open: "Search",
+    shortcut: "⌘K",
+    label: "Search your notes",
+    placeholder: "Search by words or by meaning…",
+    everywhere: "All notebooks",
+    scope: "Search in",
+    results: "Search results",
+    degraded: "Search by meaning is resting. Showing matches by words only.",
+    nothing: "Nothing found. Try other words, or search in all notebooks.",
+    hint: "Find any page by what it says or what it means.",
+  },
+
   errors: {
     network: "The service cannot be reached. Check your connection and try again.",
     unexpected: "Something went wrong. Please try again.",
