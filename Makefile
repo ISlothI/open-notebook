@@ -58,8 +58,9 @@ check-web: ## Format, lint, type check and unit test the web application
 		sh -c "npm run -s lint && npm run -s typecheck && npm run -s test"
 
 .PHONY: test
-test: ## Run the integration tests against a throw-away database
-	@$(COMPOSE_TEST) run --build --rm backend; result=$$?; \
+test: ## Run unit and integration tests with coverage thresholds
+	@mkdir -p .local/reports
+	@TEST_USER="$$(id -u):$$(id -g)" $(COMPOSE_TEST) run --build --rm backend; result=$$?; \
 		$(COMPOSE_TEST) down --volumes --remove-orphans; exit $$result
 
 .PHONY: env
@@ -87,3 +88,7 @@ logs: env ## Follow the logs of the running application
 .PHONY: down
 down: env ## Stop the application; the data is kept
 	@$(COMPOSE) down --remove-orphans
+
+.PHONY: lock-backend
+lock-backend: ## Update the Python lockfile after changing the dependencies
+	@tools/dev/uv-lock.sh

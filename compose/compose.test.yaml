@@ -28,7 +28,11 @@ services:
       ON_DATABASE_NAME: test
       ON_DATABASE_USER: test
       ON_DATABASE_PASSWORD: unused
-    command: ["pytest", "-q", "-p", "no:cacheprovider", "tests/integration"]
+      HOME: /tmp
+      COVERAGE_FILE: /tmp/coverage
+    command: ["sh", "/app/tests/run-with-coverage.sh"]
+    volumes: ["../.local/reports:/reports"]
+    user: "${TEST_USER:-65532:65532}"
     networks: [test]
     depends_on:
       db: { condition: service_healthy }
