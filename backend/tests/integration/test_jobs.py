@@ -39,7 +39,7 @@ def states(engine: Engine) -> list[str]:
 
 
 def claim(store: PostgresJobStore, lease: timedelta = LEASE) -> Job:
-    job = store.claim(lease)
+    job = store.claim("work", lease)
     assert job is not None
     return job
 
@@ -48,7 +48,7 @@ def test_job_is_claimed_once(store: PostgresJobStore, enqueue: Callable[..., Non
     enqueue()
 
     assert claim(store).payload == {"n": 1}
-    assert store.claim(LEASE) is None
+    assert store.claim("work", LEASE) is None
 
 
 def test_concurrent_workers_never_share_a_job(
@@ -58,9 +58,18 @@ def test_concurrent_workers_never_share_a_job(
         enqueue()
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        claimed = [job for job in pool.map(lambda _: store.claim(LEASE), range(40)) if job]
+        claimed = [job for job in pool.map(lambda _: store.claim("work", LEASE), range(40)) if job]
 
     assert len(claimed) == len({job.id for job in claimed}) == 20
+
+
+def test_kinds_do_not_wait_for_each_other(
+    store: PostgresJobStore, enqueue: Callable[..., None]
+) -> None:
+    enqueue(kind="flood")
+    enqueue(kind="work")
+
+    assert claim(store).kind == "work"
 
 
 def test_rolled_back_change_leaves_no_job(engine: Engine, store: PostgresJobStore) -> None:
@@ -68,7 +77,7 @@ def test_rolled_back_change_leaves_no_job(engine: Engine, store: PostgresJobStor
         tx.jobs.enqueue("work", {})
         raise RuntimeError
 
-    assert store.claim(LEASE) is None
+    assert store.claim("work", LEASE) is None
 
 
 def test_job_of_a_dead_worker_is_taken_over(
@@ -104,14 +113,14 @@ def test_renewed_lease_protects_the_job(
     job = claim(store, EXPIRED)
     assert store.extend_lease(job, LEASE)
 
-    assert store.claim(LEASE) is None
+    assert store.claim("work", LEASE) is None
 
 
 def test_retry_waits_for_its_delay(store: PostgresJobStore, enqueue: Callable[..., None]) -> None:
     enqueue()
     store.retry(claim(store), timedelta(seconds=0.5), "reason")
 
-    assert store.claim(LEASE) is None
+    assert store.claim("work", LEASE) is None
     time.sleep(0.6)
     assert claim(store).attempt == 2
 
@@ -134,7 +143,7 @@ def test_merged_job_cannot_start_before_the_merging_transaction_commits(
     enqueue(dedupe_key="k")
     with engine.begin() as connection:
         PostgresJobOutbox(connection).enqueue("work", {}, "k")
-        assert store.claim(LEASE) is None
+        assert store.claim("work", LEASE) is None
 
     claim(store)
 

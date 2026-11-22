@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from open_notebook.application.accounts import AccountService
+from open_notebook.application.exports import ExportService
 from open_notebook.application.library import LibraryService
 from open_notebook.application.pages import PageService
 from open_notebook.application.search import SearchService
@@ -14,3 +15,4 @@ class Services:
     library: LibraryService
     pages: PageService
     search: SearchService
+    exports: ExportService

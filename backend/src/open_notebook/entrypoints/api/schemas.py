@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from open_notebook.domain.accounts import User
+from open_notebook.domain.exports import Export, ExportState
 from open_notebook.domain.library import Node, NodeKind
 from open_notebook.domain.pages import PageVersion, VersionSummary
 from open_notebook.domain.search import SearchMode, SearchResults
@@ -136,3 +137,32 @@ class SearchBody(BaseModel):
     @classmethod
     def of(cls, results: SearchResults) -> Self:
         return cls.model_validate(results, from_attributes=True)
+
+
+class RequestExport(BaseModel):
+    item_id: UUID
+
+
+class ExportBody(BaseModel):
+    id: UUID
+    item_id: UUID
+    title: str
+    state: ExportState
+    progress: int
+    created_at: datetime
+    expires_at: datetime | None
+    download_url: str | None
+
+    @classmethod
+    def of(cls, export: Export) -> Self:
+        is_ready = export.state is ExportState.SUCCEEDED
+        return cls(
+            id=export.id,
+            item_id=export.item_id,
+            title=export.title,
+            state=export.state,
+            progress=export.progress,
+            created_at=export.created_at,
+            expires_at=export.expires_at,
+            download_url=f"/api/exports/{export.id}/download" if is_ready else None,
+        )

@@ -10,8 +10,12 @@ from uuid import UUID
 import structlog
 
 INDEX_PAGE = "index_page"
+EXPORT_PDF = "export_pdf"
+JOB_KINDS = (INDEX_PAGE, EXPORT_PDF)
 
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 3
+# How often a job may take its worker down with it before it is given up.
+MAX_CRASHES = 3
 BASE_DELAY = timedelta(seconds=5)
 MAX_DELAY = timedelta(minutes=2)
 
@@ -29,6 +33,7 @@ class Job:
     payload: dict[str, Any]
     # Grows with every claim, so it also tells whether a worker still owns the job.
     attempt: int
+    crashes: int
     request_id: str | None
 
 
@@ -43,7 +48,7 @@ class JobOutbox(Protocol):
 class JobStore(Protocol):
     """Every method is a transaction of its own."""
 
-    def claim(self, lease: timedelta) -> Job | None: ...
+    def claim(self, kind: str, lease: timedelta) -> Job | None: ...
 
     def extend_lease(self, job: Job, lease: timedelta) -> bool:
         """Returns whether the worker still owns the job."""
@@ -72,10 +77,15 @@ class JobProcessor:
     """Runs one claimed job and records its outcome."""
 
     def __init__(
-        self, store: JobStore, handlers: Mapping[str, JobHandler], observer: JobObserver
+        self,
+        store: JobStore,
+        handlers: Mapping[str, JobHandler],
+        observer: JobObserver,
+        on_dead: Mapping[str, JobHandler] | None = None,
     ) -> None:
         self._store = store
         self._handlers = handlers
+        self._on_dead = on_dead or {}
         self._observer = observer
 
     def process(self, job: Job) -> None:
@@ -87,12 +97,10 @@ class JobProcessor:
             log.info("job_finished", outcome=outcome, attempt=job.attempt)
 
     def _run(self, job: Job) -> str:
-        handler = self._handlers.get(job.kind)
-        if handler is None:
-            self._store.bury(job, "unknown kind")
-            return "dead"
+        if job.crashes >= MAX_CRASHES:
+            return self._bury(job, "worker crashed repeatedly")
         try:
-            handler(job)
+            self._handlers[job.kind](job)
         except TransientError as error:
             log.warning("job_postponed", error=str(error))
             self._store.retry(job, retry_delay(job.attempt), str(error))
@@ -104,7 +112,13 @@ class JobProcessor:
 
     def _handle_failure(self, job: Job, error: str) -> str:
         if job.attempt >= MAX_ATTEMPTS:
-            self._store.bury(job, error)
-            return "dead"
+            return self._bury(job, error)
         self._store.retry(job, retry_delay(job.attempt), error)
         return "failed"
+
+    def _bury(self, job: Job, error: str) -> str:
+        log.error("job_dead", error=error)
+        if job.kind in self._on_dead:
+            self._on_dead[job.kind](job)
+        self._store.bury(job, error)
+        return "dead"

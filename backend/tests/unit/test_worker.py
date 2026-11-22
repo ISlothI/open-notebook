@@ -5,7 +5,7 @@ from uuid import uuid4
 from prometheus_client import REGISTRY
 
 from open_notebook.application.jobs import Job, JobProcessor
-from open_notebook.entrypoints.worker.loop import HEARTBEAT, WorkerLoop
+from open_notebook.entrypoints.worker.loop import HEARTBEAT, Timing, WorkerLoop
 from tests.unit.test_jobs import FakeStore, RecordingObserver
 
 
@@ -22,7 +22,7 @@ class StopAfterWaits:
 
 
 def new_job() -> Job:
-    return Job(uuid4(), "work", {}, 1, None)
+    return Job(uuid4(), "work", {}, 1, 0, None)
 
 
 def run_loop(
@@ -38,7 +38,9 @@ def run_loop(
             delay.wait(0.5)
 
     processor = JobProcessor(store, {"work": handle}, RecordingObserver())
-    loop = WorkerLoop(store, processor, StopAfterWaits(waits), timedelta(seconds=lease), 0)
+    loop = WorkerLoop(
+        "work", store, processor, StopAfterWaits(waits), Timing(timedelta(seconds=lease), 0)
+    )
     loop.run(Event())
 
 
@@ -95,5 +97,7 @@ def test_loop_ends_immediately_when_stop_is_requested() -> None:
     stop.set()
     handled: list[Job] = []
     processor = JobProcessor(FakeStore([new_job()]), {}, RecordingObserver())
-    WorkerLoop(FakeStore([new_job()]), processor, StopAfterWaits(1), timedelta(1), 60).run(stop)
+    WorkerLoop(
+        "work", FakeStore([new_job()]), processor, StopAfterWaits(1), Timing(timedelta(1), 60)
+    ).run(stop)
     assert handled == []

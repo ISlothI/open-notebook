@@ -4,8 +4,20 @@ FROM ghcr.io/astral-sh/uv:0.13.9@sha256:d3b601f0c7b118bc1753febf7c41cc80981df678
 FROM python:3.13-slim-trixie@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    XDG_CACHE_HOME=/tmp/cache \
     PATH=/opt/venv/bin:$PATH
 WORKDIR /app
+# Debian removes superseded package versions, so pinning them would break rebuilds.
+# The base image digest limits the drift. Review this exception by 2027-06-30.
+# hadolint ignore=DL3008
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends \
+    fonts-dejavu-core libharfbuzz-subset0 libpango-1.0-0 libpangoft2-1.0-0 \
+  && rm -rf /var/lib/apt/lists/*
+# The book face of the PDF (SIL Open Font License), the same family as on the web.
+ADD --checksum=sha256:8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1 --chmod=444 https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/newsreader/Newsreader%5Bopsz,wght%5D.ttf /usr/local/share/fonts/Newsreader.ttf
+ADD --checksum=sha256:796668611f80b64d5adf182fde3b6f29ed83b4e7cbec7b96937e84ac01364792 --chmod=444 https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/newsreader/Newsreader-Italic%5Bopsz,wght%5D.ttf /usr/local/share/fonts/Newsreader-Italic.ttf
+RUN fc-cache --force
 
 # The embedding model (Apache-2.0), pinned by revision and checksum; nothing is downloaded at run time.
 FROM scratch AS model

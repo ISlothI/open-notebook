@@ -140,6 +140,7 @@ jobs = Table(
     Column("dedupe_key", Text),
     Column("state", Text, nullable=False, server_default="queued"),
     Column("attempts", Integer, nullable=False, server_default="0"),
+    Column("crashes", Integer, nullable=False, server_default="0"),
     Column("run_after", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("leased_until", DateTime(timezone=True)),
     Column("error", Text),
@@ -171,4 +172,25 @@ search_chunks = Table(
     Column("tsv", TSVECTOR, FetchedValue(), nullable=False),
     PrimaryKeyConstraint("page_id", "ordinal"),
     Index("ix_search_chunks_tsv", "tsv", postgresql_using="gin"),
+)
+
+exports = Table(
+    "exports",
+    metadata,
+    Column("id", Uuid, primary_key=True, server_default=NEW_ID),
+    Column("owner_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("item_id", ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("title", Text, nullable=False),
+    Column("snapshot", JSONB, nullable=False),
+    Column("state", Text, nullable=False, server_default="queued"),
+    Column("progress", Integer, nullable=False, server_default="0"),
+    Column("artifact", LargeBinary),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("finished_at", DateTime(timezone=True)),
+    Column("expires_at", DateTime(timezone=True)),
+    CheckConstraint(
+        "state IN ('queued', 'running', 'succeeded', 'failed', 'expired')", name="state"
+    ),
+    CheckConstraint("(state = 'succeeded') = (artifact IS NOT NULL)", name="artifact"),
+    Index(None, "owner_id", "created_at"),
 )

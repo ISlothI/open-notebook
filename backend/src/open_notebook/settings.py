@@ -25,7 +25,6 @@ class Settings(ProcessSettings):
 
     worker_metrics_port: int = 9100
     worker_poll_seconds: float = 2.0
-    worker_threads: int = 2
     job_lease_seconds: float = 30.0
 
     embedder_url: str = "http://embedder:8001"

@@ -7,9 +7,10 @@ from types import FrameType
 
 from prometheus_client import REGISTRY, start_http_server
 
-from open_notebook.application.jobs import JobProcessor
-from open_notebook.bootstrap import build_handlers
-from open_notebook.entrypoints.worker.loop import WorkerLoop
+from open_notebook.application.jobs import JOB_KINDS
+from open_notebook.bootstrap import build_cleanup, build_job_processor
+from open_notebook.entrypoints.worker.cleanup_loop import run_cleanup
+from open_notebook.entrypoints.worker.loop import Timing, WorkerLoop
 from open_notebook.infrastructure.build_info import publish_build_info
 from open_notebook.infrastructure.database import build_engine
 from open_notebook.infrastructure.embedding_client import build_embeddings
@@ -39,21 +40,25 @@ def main() -> None:
     signal.signal(signal.SIGINT, request_stop)
 
     store = PostgresJobStore(engine)
-    handlers = build_handlers(engine, build_embeddings(settings.embedder_url))
+    processor = build_job_processor(
+        engine, store, build_embeddings(settings.embedder_url), JobMetrics()
+    )
+    timing = Timing(timedelta(seconds=settings.job_lease_seconds), settings.worker_poll_seconds)
 
-    def run_loop() -> None:
+    def run_loop(kind: str) -> None:
         job_signal = JobSignal(settings)
         loop = WorkerLoop(
+            kind,
             store,
-            JobProcessor(store, handlers, JobMetrics()),
+            processor,
             job_signal,
-            timedelta(seconds=settings.job_lease_seconds),
-            settings.worker_poll_seconds,
+            timing,
         )
         loop.run(stop)
         job_signal.close()
 
-    threads = [Thread(target=run_loop) for _ in range(settings.worker_threads)]
+    threads = [Thread(target=run_loop, args=(kind,)) for kind in JOB_KINDS]
+    threads.append(Thread(target=run_cleanup, args=(build_cleanup(engine), stop)))
     for thread in threads:
         thread.start()
     for thread in threads:

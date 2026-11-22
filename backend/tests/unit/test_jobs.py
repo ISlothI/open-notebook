@@ -6,6 +6,7 @@ import pytest
 
 from open_notebook.application.jobs import (
     MAX_ATTEMPTS,
+    MAX_CRASHES,
     MAX_DELAY,
     Job,
     JobProcessor,
@@ -22,7 +23,7 @@ class FakeStore:
         self.claim_failures = 0
         self.renewals = 0
 
-    def claim(self, lease: timedelta) -> Job | None:
+    def claim(self, kind: str, lease: timedelta) -> Job | None:
         if self.claim_failures:
             self.claim_failures -= 1
             raise ConnectionError
@@ -81,25 +82,17 @@ def test_outcomes(handler: Callable[[Job], None], attempt: int, stored: str, obs
     store, observer = FakeStore(), RecordingObserver()
 
     JobProcessor(store, {"work": handler}, observer).process(
-        Job(uuid4(), "work", {}, attempt, None)
+        Job(uuid4(), "work", {}, attempt, 0, None)
     )
 
     assert (store.outcomes, observer.outcomes) == ([stored], [observed])
-
-
-def test_unknown_kind_is_buried() -> None:
-    store, observer = FakeStore(), RecordingObserver()
-
-    JobProcessor(store, {}, observer).process(Job(uuid4(), "work", {}, 1, None))
-
-    assert (store.outcomes, observer.outcomes) == (["buried"], ["dead"])
 
 
 def test_job_taken_over_by_another_worker_is_not_reported_as_success() -> None:
     store, observer = FakeStore(), RecordingObserver()
     store.owned = False
 
-    JobProcessor(store, {"work": succeed}, observer).process(Job(uuid4(), "work", {}, 1, None))
+    JobProcessor(store, {"work": succeed}, observer).process(Job(uuid4(), "work", {}, 1, 0, None))
 
     assert observer.outcomes == ["lost"]
 
@@ -114,3 +107,13 @@ def test_retry_delay_grows_to_a_limit() -> None:
 
 def test_retry_delay_is_spread() -> None:
     assert retry_delay(1, jitter=lambda: 0.0) == retry_delay(1, jitter=lambda: 1.0) / 2
+
+
+def test_job_that_keeps_crashing_its_worker_is_buried_without_running() -> None:
+    store, observer = FakeStore(), RecordingObserver()
+    told: list[Job] = []
+    job = Job(uuid4(), "work", {}, 4, MAX_CRASHES, None)
+
+    JobProcessor(store, {"work": fail}, observer, {"work": told.append}).process(job)
+
+    assert (store.outcomes, observer.outcomes, told) == (["buried"], ["dead"], [job])

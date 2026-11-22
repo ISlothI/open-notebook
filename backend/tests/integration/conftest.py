@@ -8,9 +8,9 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
 
-from open_notebook.application.jobs import JobProcessor
+from open_notebook.application.jobs import JOB_KINDS
 from open_notebook.application.ports import EmbeddingProvider
-from open_notebook.bootstrap import build_handlers, build_services
+from open_notebook.bootstrap import build_job_processor, build_services
 from open_notebook.entrypoints.api.app import create_app
 from open_notebook.infrastructure.database import DatabaseProbe, build_engine
 from open_notebook.infrastructure.job_metrics import JobMetrics
@@ -36,13 +36,14 @@ def build_test_client(engine: Engine, embeddings: EmbeddingProvider) -> Notebook
 def build_job_runner(engine: Engine, embeddings: EmbeddingProvider) -> Callable[[], int]:
     """Plays the worker until no job is due; the result tells how many jobs ran."""
     store = PostgresJobStore(engine)
-    processor = JobProcessor(store, build_handlers(engine, embeddings), JobMetrics())
+    processor = build_job_processor(engine, store, embeddings, JobMetrics())
 
     def run() -> int:
         count = 0
-        while job := store.claim(LEASE):
-            processor.process(job)
-            count += 1
+        for kind in JOB_KINDS:
+            while job := store.claim(kind, LEASE):
+                processor.process(job)
+                count += 1
         return count
 
     return run

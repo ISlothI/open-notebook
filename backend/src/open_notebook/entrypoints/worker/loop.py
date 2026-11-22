@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import timedelta
 from threading import Event, Thread
 from typing import Protocol
@@ -28,32 +29,41 @@ class Signal(Protocol):
         """Returns when a job may be available, after `seconds` at the latest."""
 
 
+@dataclass(frozen=True)
+class Timing:
+    lease: timedelta
+    poll_seconds: float
+
+
 class WorkerLoop:
+    """Processes one kind of job, so that a flood of one kind cannot delay the others."""
+
     def __init__(
         self,
+        kind: str,
         store: JobStore,
         processor: JobProcessor,
         signal: Signal,
-        lease: timedelta,
-        poll_seconds: float,
+        timing: Timing,
     ) -> None:
+        self._kind = kind
         self._store = store
         self._processor = processor
         self._signal = signal
-        self._lease = lease
-        self._poll_seconds = poll_seconds
+        self._lease = timing.lease
+        self._poll_seconds = timing.poll_seconds
 
     def run(self, stop: Event) -> None:
         """Runs until `stop` is set; a job that has started is finished first."""
-        log.info("worker_started")
+        log.info("worker_started", kind=self._kind)
         while not stop.is_set():
             if not self._process_next():
                 self._signal.wait(self._poll_seconds, stop)
-        log.info("worker_stopped")
+        log.info("worker_stopped", kind=self._kind)
 
     def _process_next(self) -> bool:
         try:
-            job = self._store.claim(self._lease)
+            job = self._store.claim(self._kind, self._lease)
             HEARTBEAT.set_to_current_time()
             if job is None:
                 return False
