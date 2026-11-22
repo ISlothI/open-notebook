@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from sqlalchemy import Connection, Engine
 
 from open_notebook.infrastructure.postgres.accounts import PostgresAccounts
+from open_notebook.infrastructure.postgres.jobs import PostgresJobOutbox
 from open_notebook.infrastructure.postgres.nodes import PostgresNodes
 from open_notebook.infrastructure.postgres.pages import PostgresPages
+from open_notebook.infrastructure.postgres.search import PostgresSearchIndex
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,8 @@ class PostgresTransaction:
     nodes: PostgresNodes
     pages: PostgresPages
     accounts: PostgresAccounts
+    search: PostgresSearchIndex
+    jobs: PostgresJobOutbox
 
 
 def open_transaction(connection: Connection) -> PostgresTransaction:
@@ -23,6 +27,8 @@ def open_transaction(connection: Connection) -> PostgresTransaction:
         nodes=PostgresNodes(connection),
         pages=PostgresPages(connection),
         accounts=PostgresAccounts(connection),
+        search=PostgresSearchIndex(connection),
+        jobs=PostgresJobOutbox(connection),
     )
 
 

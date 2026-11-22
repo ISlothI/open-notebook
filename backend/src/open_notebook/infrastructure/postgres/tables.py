@@ -1,9 +1,12 @@
 """Table definitions; the migrations are checked against them."""
 
+from typing import Any
+
 from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    FetchedValue,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -18,6 +21,8 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.types import UserDefinedType
 
 metadata = MetaData(
     naming_convention={
@@ -28,6 +33,19 @@ metadata = MetaData(
         "pk": "pk_%(table_name)s",
     }
 )
+
+
+class EmbeddingVector(UserDefinedType[str]):
+    """pgvector's type, read and written in its text form."""
+
+    cache_ok = True
+
+    def __init__(self, dimensions: int) -> None:
+        self.dimensions = dimensions
+
+    def get_col_spec(self, **_options: Any) -> str:  # noqa: ANN401 - signature of SQLAlchemy
+        return f"vector({self.dimensions})"
+
 
 # Time-ordered identifiers keep the indexes compact.
 NEW_ID = text("uuidv7()")
@@ -111,4 +129,46 @@ page_versions = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("restored_from", Integer),
     PrimaryKeyConstraint("page_id", "number"),
+)
+
+jobs = Table(
+    "jobs",
+    metadata,
+    Column("id", Uuid, primary_key=True, server_default=NEW_ID),
+    Column("kind", Text, nullable=False),
+    Column("payload", JSONB, nullable=False),
+    Column("dedupe_key", Text),
+    Column("state", Text, nullable=False, server_default="queued"),
+    Column("attempts", Integer, nullable=False, server_default="0"),
+    Column("run_after", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("leased_until", DateTime(timezone=True)),
+    Column("error", Text),
+    Column("request_id", Text),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("finished_at", DateTime(timezone=True)),
+    CheckConstraint("state IN ('queued', 'running', 'succeeded', 'dead')", name="state"),
+    Index(
+        "uq_jobs_waiting_dedupe_key",
+        "dedupe_key",
+        unique=True,
+        postgresql_where=text("state = 'queued'"),
+    ),
+    Index(
+        "ix_jobs_unfinished",
+        "run_after",
+        postgresql_where=text("state IN ('queued', 'running')"),
+    ),
+)
+
+search_chunks = Table(
+    "search_chunks",
+    metadata,
+    Column("page_id", ForeignKey("pages.node_id", ondelete="CASCADE"), nullable=False),
+    Column("ordinal", Integer, nullable=False),
+    Column("title", Text, nullable=False),
+    Column("text", Text, nullable=False),
+    Column("embedding", EmbeddingVector(384)),
+    Column("tsv", TSVECTOR, FetchedValue(), nullable=False),
+    PrimaryKeyConstraint("page_id", "ordinal"),
+    Index("ix_search_chunks_tsv", "tsv", postgresql_using="gin"),
 )

@@ -5,6 +5,7 @@ from uuid import UUID
 import structlog
 
 from open_notebook.application.access import require_active_node
+from open_notebook.application.indexing import request_indexing
 from open_notebook.application.pages import save_version
 from open_notebook.application.ports import Transaction, TransactionFactory
 from open_notebook.domain.errors import InvalidHierarchyError, NotFoundError, ParentTrashedError
@@ -30,6 +31,7 @@ class LibraryService:
             node = tx.nodes.add(owner_id, kind, parent, cleaned)
             if kind is NodeKind.PAGE:
                 tx.pages.create(node.id, cleaned)
+                request_indexing(tx.jobs, node.id)
         log.info("item_created", node_id=str(node.id), kind=kind)
         return node
 

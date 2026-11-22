@@ -7,9 +7,13 @@ dependencies = [
   "alembic>=1.20,<2",
   "argon2-cffi>=25.1,<26",
   "fastapi>=0.165,<0.166",
+  "httpx2>=2.16,<3",
+  "markdown-it-py>=4.3,<5",
+  "onnxruntime>=1.32,<1.33",
   "prometheus-client>=0.26,<0.27",
   "psycopg[binary]>=3.3,<4",
   "pydantic-settings>=2.16,<3",
+  "sentencepiece>=0.2.3,<0.3",
   "sqlalchemy>=2.1,<2.2",
   "structlog>=26.1,<27",
   "uvicorn>=0.54,<0.55",
@@ -17,7 +21,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "httpx2>=2.16,<3",
   "mypy>=2.4,<3",
   "pytest>=9.2,<10",
   "pytest-cov>=7",
@@ -26,6 +29,8 @@ dev = [
 
 [project.scripts]
 open-notebook-api = "open_notebook.entrypoints.api.main:main"
+open-notebook-embedder = "open_notebook.entrypoints.embedder.main:main"
+open-notebook-reindex = "open_notebook.entrypoints.reindex:main"
 open-notebook-worker = "open_notebook.entrypoints.worker.main:main"
 
 [build-system]
@@ -48,6 +53,11 @@ plugins = ["pydantic.mypy"]
 packages = ["open_notebook", "tests"]
 mypy_path = ["src", "."]
 
+[[tool.mypy.overrides]]
+# These packages ship no type information.
+module = ["onnxruntime.*", "sentencepiece.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers --strict-config"
@@ -59,4 +69,4 @@ filterwarnings = ["error"]
 branch = true
 source = ["open_notebook"]
 # Composition roots are exercised by the smoke test of the running stack.
-omit = ["*/entrypoints/*/main.py"]
+omit = ["*/entrypoints/*/main.py", "*/entrypoints/reindex.py"]

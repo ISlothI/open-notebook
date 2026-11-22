@@ -4,13 +4,17 @@ from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class ProcessSettings(BaseSettings):
+    """What every process needs, including those without a database."""
+
     model_config = SettingsConfigDict(env_prefix="ON_", frozen=True)
 
     environment: str = "local"
     version: str = "dev"
     log_level: str = "INFO"
 
+
+class Settings(ProcessSettings):
     database_host: str
     database_port: int = 5432
     database_name: str
@@ -18,8 +22,13 @@ class Settings(BaseSettings):
     database_password: SecretStr
 
     api_port: int = 8000
+
     worker_metrics_port: int = 9100
     worker_poll_seconds: float = 2.0
+    worker_threads: int = 2
+    job_lease_seconds: float = 30.0
+
+    embedder_url: str = "http://embedder:8001"
 
     @property
     def database_url(self) -> str:
