@@ -71,3 +71,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | None needed |
 | Verification | Quality thresholds fixed before measuring; 144 backend and 23 browser tests; live outage exercise ([evidence](../evidence/phase-04-search.md)) |
 | AI mistakes found | The planned model failed the quality thresholds and was replaced after a measured comparison. The tokenizer library took 285 MiB, found by measuring memory. A first fake embedding made all unrelated texts identical, so a test passed and failed for the wrong reasons. One commit was made without waiting for the result of `make check`; CI rejected it |
+
+## 2026-11-22 – Phase 5, PDF export
+
+| | |
+|---|---|
+| Task | PDF export, status, download, cleanup |
+| AI proposal | Session-protected download instead of the planned signed link, to avoid another secret |
+| Human decision | None needed |
+| Verification | 164 backend and 25 browser tests, mutation check of the SSRF test, live `SIGKILL` exercise, pages inspected visually ([evidence](../evidence/phase-05-pdf-export.md)) |
+| AI mistakes found | All worker threads took any kind of job, so a flood of indexing delayed exports by 31 s; only the live exercise showed it. A retry kept the job in the wrong state. `clip-path` is not supported by the renderer. A duration was first written into an ADR as an estimate and then replaced by a measurement |

@@ -11,4 +11,6 @@ Planned decisions are listed in the [project plan](../project-plan.md#41-main-de
 | [0003](0003-postgresql-job-queue.md) | Job queue in PostgreSQL | Accepted |
 | [0004](0004-hybrid-search-in-postgresql.md) | Hybrid search in PostgreSQL | Accepted |
 | [0005](0005-separate-embedder.md) | Separate embedder process | Accepted |
+| [0006](0006-pdf-with-weasyprint.md) | PDF with WeasyPrint | Accepted |
+| [0007](0007-export-files-in-postgresql.md) | Export files in PostgreSQL | Accepted |
 | [0012](0012-toolbox-container.md) | Toolbox container | Accepted |

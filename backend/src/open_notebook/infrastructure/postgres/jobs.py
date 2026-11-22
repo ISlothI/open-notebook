@@ -15,16 +15,20 @@ from open_notebook.infrastructure.postgres.tables import jobs
 NOTIFICATION_CHANNEL = "jobs"
 
 CLAIM = text("""
-    UPDATE jobs SET state = 'running', attempts = attempts + 1, leased_until = now() + :lease
+    UPDATE jobs SET state = 'running', attempts = attempts + 1, leased_until = now() + :lease,
+        -- Its worker died without reporting anything.
+        crashes = crashes + CASE WHEN state = 'running' THEN 1 ELSE 0 END
     WHERE id = (
         SELECT id FROM jobs
-        WHERE (state = 'queued' AND run_after <= now())
-           OR (state = 'running' AND leased_until < now())
+        WHERE kind = :kind AND (
+            (state = 'queued' AND run_after <= now())
+            OR (state = 'running' AND leased_until < now())
+        )
         ORDER BY run_after
         LIMIT 1
         FOR UPDATE SKIP LOCKED
     )
-    RETURNING id, kind, payload, attempts, request_id
+    RETURNING id, kind, payload, attempts, crashes, request_id
 """)
 
 
@@ -59,12 +63,12 @@ class PostgresJobStore:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
-    def claim(self, lease: timedelta) -> Job | None:
+    def claim(self, kind: str, lease: timedelta) -> Job | None:
         with self._engine.begin() as connection:
-            row = connection.execute(CLAIM, {"lease": lease}).one_or_none()
+            row = connection.execute(CLAIM, {"kind": kind, "lease": lease}).one_or_none()
         if row is None:
             return None
-        return Job(row.id, row.kind, row.payload, row.attempts, row.request_id)
+        return Job(row.id, row.kind, row.payload, row.attempts, row.crashes, row.request_id)
 
     def extend_lease(self, job: Job, lease: timedelta) -> bool:
         return self._update_owned(job, leased_until=func.now() + lease)
@@ -75,7 +79,15 @@ class PostgresJobStore:
         )
 
     def retry(self, job: Job, delay: timedelta, error: str) -> bool:
-        return self._update_owned(job, leased_until=func.now() + delay, error=error)
+        # Without its key it cannot collide with a waiting job that was enqueued meanwhile.
+        return self._update_owned(
+            job,
+            state="queued",
+            run_after=func.now() + delay,
+            leased_until=None,
+            dedupe_key=None,
+            error=error,
+        )
 
     def bury(self, job: Job, error: str) -> bool:
         return self._update_owned(

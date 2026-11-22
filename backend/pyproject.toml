@@ -17,10 +17,12 @@ dependencies = [
   "sqlalchemy>=2.1,<2.2",
   "structlog>=26.1,<27",
   "uvicorn>=0.54,<0.55",
+  "weasyprint>=70,<71",
 ]
 
 [dependency-groups]
 dev = [
+  "pypdf>=7.1,<8",
   "mypy>=2.4,<3",
   "pytest>=9.2,<10",
   "pytest-cov>=7",
@@ -57,7 +59,7 @@ mypy_path = ["src", "."]
 
 [[tool.mypy.overrides]]
 # These packages ship no type information.
-module = ["onnxruntime.*", "sentencepiece.*"]
+module = ["onnxruntime.*", "sentencepiece.*", "weasyprint.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

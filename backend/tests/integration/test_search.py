@@ -125,7 +125,7 @@ def test_r2_search_works_without_the_embedder_and_catches_up(
 
     embeddings.available = True
     with engine.begin() as connection:
-        connection.execute(text("UPDATE jobs SET leased_until = now() - interval '1 s'"))
+        connection.execute(text("UPDATE jobs SET run_after = now()"))
     run_jobs()
 
     assert alice.search("car")["mode"] == "hybrid"

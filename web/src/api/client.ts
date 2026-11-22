@@ -6,6 +6,7 @@ export type Item = components["schemas"]["NodeBody"];
 export type Kind = components["schemas"]["NodeKind"];
 export type Page = components["schemas"]["PageBody"];
 export type Version = components["schemas"]["VersionBody"];
+export type Export = components["schemas"]["ExportBody"];
 export type SearchResults = components["schemas"]["SearchBody"];
 export type SearchHit = components["schemas"]["SearchHitBody"];
 export type User = components["schemas"]["UserBody"];
@@ -92,6 +93,8 @@ export const api = {
     call(http.GET("/api/pages/{page_id}/versions/{number}", version(id, number))),
   search: (q: string, notebook_id: string | null, signal: AbortSignal) =>
     call(http.GET("/api/search", { params: { query: { q, notebook_id } }, signal })),
+  requestExport: (item_id: string) => call(http.POST("/api/exports", { body: { item_id } })),
+  exports: () => call(http.GET("/api/exports")),
   restoreVersion: (id: string, number: number) =>
     call(http.POST("/api/pages/{page_id}/versions/{number}/restore", version(id, number))),
 };

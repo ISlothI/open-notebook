@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router";
 import { ApiError, api } from "./api/client";
 import { AuthScreen } from "./auth/AuthScreen";
 import { PageView } from "./editor/PageView";
+import { ExportsView } from "./exports/ExportsView";
 import { LibraryProvider } from "./library/LibraryContext";
 import { messages } from "./messages";
 import { SectionView, Shell, Welcome } from "./Shell";
@@ -49,6 +50,7 @@ export function App() {
           <Route index element={<Welcome />} />
           <Route path="section/:sectionId" element={<SectionView />} />
           <Route path="page/:pageId" element={<PageView />} />
+          <Route path="exports" element={<ExportsView />} />
           <Route path="trash" element={<TrashView />} />
           <Route path="*" element={<Welcome />} />
         </Route>
