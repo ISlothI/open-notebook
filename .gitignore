@@ -1,0 +1,35 @@
+# Secrets and local configuration (generated per environment)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.local/
+
+# OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.example.tfvars
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+playwright-report/
+test-results/
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
