@@ -1,0 +1,150 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - web/**
+      - database/**
+      - deploy/chart/**
+      - tools/release/**
+      - tools/toolbox/**
+      - VERSION
+      - .trivyignore.yaml
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/islothi
+
+jobs:
+  version:
+    name: Choose the version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.choose.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: choose
+        run: echo "version=$(cat VERSION).$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build, scan, push (${{ matrix.architecture }})
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - { architecture: amd64, runner: ubuntu-24.04 }
+          - { architecture: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      ARCHITECTURE: ${{ matrix.architecture }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and scan
+        run: make scan APP_VERSION="$VERSION"
+      - name: Push the scanned images
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          for name in backend web database; do
+            target="$REGISTRY/open-notebook-$name:$VERSION-$ARCHITECTURE"
+            docker tag "open-notebook-$name:local" "$target"
+            docker push --quiet "$target"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: vulnerability-reports-${{ matrix.architecture }}
+          path: .local/reports
+          retention-days: 90
+
+  publish:
+    name: Sign, describe, publish
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      REPORT_DIR: .local/reports
+      # Keyless signing needs the identity token of the run and the registry login.
+      TOOLBOX: >-
+        docker run --rm --user 1001:1001 --volume ${{ github.workspace }}:/workspace
+        --volume /home/runner/.docker:/tmp/.docker:ro
+        --env ACTIONS_ID_TOKEN_REQUEST_URL --env ACTIONS_ID_TOKEN_REQUEST_TOKEN
+        open-notebook-toolbox:ops
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: make toolbox-ops
+      - name: Sign in to the registry
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$REPORT_DIR"
+          echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Publish the images
+        id: images
+        run: |
+          tools/release/publish-images.sh "$VERSION" .local/digests
+          cat .local/digests >> "$GITHUB_OUTPUT"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/islothi/open-notebook-backend
+          subject-digest: ${{ steps.images.outputs.backend }}
+          push-to-registry: true
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/islothi/open-notebook-web
+          subject-digest: ${{ steps.images.outputs.web }}
+          push-to-registry: true
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/islothi/open-notebook-database
+          subject-digest: ${{ steps.images.outputs.database }}
+          push-to-registry: true
+      - name: Publish the chart
+        run: tools/release/publish-chart.sh "$VERSION" .local/digests
+      - name: Verify the release
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          tools/release/verify.sh "$VERSION" | tee "$REPORT_DIR/verification.txt"
+          {
+            echo "## Release $VERSION"
+            echo '```'
+            cat .local/digests "$REPORT_DIR/verification.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: sbom-and-verification
+          path: .local/reports
+          retention-days: 90
