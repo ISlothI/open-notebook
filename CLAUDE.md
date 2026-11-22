@@ -1,106 +1,110 @@
-# Open Notebook – munkavégzési iránytű
+# Open Notebook – working guide
 
-Egyetemi beadandó az „L Felhő és DevOps alapok gyak." kurzusra: OneNote-szerű jegyzetelő, köré épített, reprodukálható fejlesztési és üzemeltetési folyamattal. **Az értékelés tárgya elsősorban a DevOps-folyamat és annak bizonyítékai**, de az alkalmazásnak is fizetős termék minőségűnek kell lennie.
+University assignment for the "Cloud and DevOps Basics" practical course: a OneNote-like note-taking application with a reproducible development and operations process built around it. **What is graded is primarily the DevOps process and its evidence**, but the application itself must also have the quality of a paid product.
 
-A részletes terv: [docs/project-plan.md](docs/project-plan.md). Ha a kód és a terv eltér, vagy a kódot, vagy a tervet javítsd; eltérés nem maradhat.
+The detailed plan is [docs/project-plan.md](docs/project-plan.md). If code and plan disagree, fix one of them; the discrepancy must not stay.
 
-## 1. Követelmények
+## 1. Requirements
 
-### Kötelező feltételek (bármelyik hiánya bukás)
+### Mandatory conditions (missing any of them means failing)
 
-1. A projekt **tiszta környezetben reprodukálható**.
-2. **Nincs valódi hozzáférési titok** a repóban, a git történetben, az image-ekben és a logokban.
-3. Legalább egy felhasználói folyamatot **automatizált ellenőrzés igazol**.
-4. Legalább 30 pont a 60-ból (a cél a 60).
+1. The project is **reproducible in a clean environment**.
+2. There is **no real credential** in the repository, git history, images or logs.
+3. At least one user flow is **verified by an automated check**.
+4. At least 30 of 60 points (the target is 60).
 
-### Értékelés
+### Grading
 
-| # | Terület | Pont |
+| # | Area | Points |
 |---|---|---:|
-| É1 | Egy főre méretezett, érdemi rendszer és indokolt architektúra | 5 |
-| É2 | Reprodukálható helyi környezet és áttekinthető repository | 5 |
-| É3 | Automatizált tesztek és folyamatos integráció | 9 |
-| É4 | Artifactkezelés, biztonsági vizsgálat, SBOM és titokkezelés | 7 |
-| É5 | Deklaratív telepítés, elkülönített környezetek, verzióváltás és visszaállítás | 9 |
-| É6 | CD/GitOps: Gitben tárolt kívánt állapot és automatizált kiadáskezelés | 5 |
-| É7 | IaC- és konfigurációkezelési döntések, reprodukálhatóság | 5 |
-| É8 | Metrikák, naplózás, dashboard és SLI/SLO | 7 |
-| É9 | Megbízhatósági és helyreállítási bizonyítékok | 4 |
-| É10 | Az AI-támogatott munkafolyamat szakmai ellenőrzése | 4 |
+| G1 | Meaningful system sized for one person, justified architecture | 5 |
+| G2 | Reproducible local environment and clear repository | 5 |
+| G3 | Automated tests and continuous integration | 9 |
+| G4 | Artifact management, security scanning, SBOM and secret management | 7 |
+| G5 | Declarative deployment, separated environments, version change and rollback | 9 |
+| G6 | CD/GitOps: desired state in Git and automated release management | 5 |
+| G7 | IaC and configuration management decisions, reproducibility | 5 |
+| G8 | Metrics, logging, dashboard and SLI/SLO | 7 |
+| G9 | Reliability and recovery evidence | 4 |
+| G10 | Professional verification of the AI-assisted workflow | 4 |
 
-- Nem az eszközök száma számít. Minden technológiát a rendszer igényével indoklunk; alternatíva választásakor dokumentáljuk, hogyan teljesül az elvárt képesség.
-- A rendszernek kell: felhasználói vagy API-belépési pont, tartós adattárolás, érdemi kiegészítő feldolgozás, és legalább három dokumentált felhasználói folyamat, köztük hiba- vagy helyreállítási útvonal.
-- Beadandó: forráskód, telepítési konfiguráció, README (működés és reprodukció), architektúra és döntések, az automatizált ellenőrzések bizonyítékai, megfigyelhetőségi eredmények, kipróbált helyreállítási eljárás, rövid szakmai AI-dokumentáció.
-- Nincs bemutató és nincs köztes mérföldkő: **csak az számít, ami a repóból ellenőrizhető.**
-- Fizetős felhőszolgáltatás nem használható; minden helyben vagy az ingyenes GitHub-szolgáltatásokkal fut.
+- The number of tools does not matter. Every technology is justified by a need of the system; when an alternative is chosen, document how the expected capability is met.
+- The system needs: a user or API entry point, durable storage, meaningful additional processing, and at least three documented user flows including a failure or recovery path.
+- Deliverables: source code, deployment configuration, README (operation and reproduction), architecture and decisions, evidence of automated checks, observability results, an exercised recovery procedure, short professional AI-usage documentation.
+- There is no presentation and no intermediate milestone: **only what can be verified from the repository counts.**
+- No paid cloud service; everything runs locally or on free GitHub services.
 
-### Funkciók (a hallgató specifikációja)
+### Features (the student's specification)
 
-1. **Hierarchikus jegyzetelés**: mappák, notebookok, szakaszok, oldalak. Az oldal tartalma Markdown.
-2. **Oldalverziók**: minden mentés új verzió; bármelyik korábbi verzió visszaállítható.
-3. **Lomtár**: a törölt mappák, notebookok, szakaszok és oldalak visszaállíthatók.
-4. **Hibrid keresés** (szemantikus és teljes szöveges) minden notebookban, notebookra szűrhetően; az indexelést worker végzi.
-5. **PDF-export**: oldal vagy teljes notebook, tartalomjegyzékkel; háttérfeladat, követhető állapot, letöltési link.
-6. **Megjelenés**: esztétikus és funkcionális, az Apple letisztultságából merít, de egyedi hangulatú, saját logóval.
+1. **Hierarchical notes**: folders, notebooks, sections, pages. Page content is Markdown.
+2. **Page versions**: every save creates a new version; any earlier version can be restored.
+3. **Trash**: deleted folders, notebooks, sections and pages can be restored.
+4. **Hybrid search** (semantic and full-text) across all notebooks, filterable by notebook; indexing is done by a worker.
+5. **PDF export**: a page or a whole notebook, with table of contents; background job, trackable status, download link.
+6. **Look and feel**: aesthetic and functional, inspired by Apple's clarity, but with its own mood and logo.
 
-Ezen túli funkció csak a hallgató jóváhagyásával kerülhet be.
+Approved addition: minimal sign-in (e-mail, password, session). Anything beyond this needs the student's approval.
 
-## 2. Együttműködési szabályok
+## 2. Collaboration rules
 
-- **Nyelv**: a hallgatóval és a dokumentációban magyarul; a kód, az azonosítók, a kommentek és a commitok angolul.
-- **Telepítés előtt egyeztess.** A gépen Docker Desktop, git, make, Python 3.11, uv, kubectl és gh van. Minden más eszköz konténerből (toolbox) fut. Ha ez nem elég, előbb kérdezz.
-- **Ami csak felhasználói felületen végezhető el**, azt kérd a hallgatótól: pontos lépésekkel, és azzal, hogy miről ismerhető fel a siker.
-- **Commitolj rendszeresen**, kis, önállóan értelmes és zöld egységekben. Push, PR, merge és távoli beállítás módosítása csak engedéllyel.
-- **Erőforráskorlát**: a gép 8 GB RAM-os, a Docker VM kb. 3,8 GiB-ot kap, a szabad lemez kb. 27 GB. Új komponens előtt számold újra a terv memóriakeretét.
-- Docker volume-ot, image-et vagy klasztert csak akkor törölj, ha ehhez a projekthez tartozik. A gépen más projektek volume-jai is vannak: **`docker system prune` és `docker volume prune` tilos.**
+- **Language**: the code, the UI, all documentation, commits and PRs are in English. Conversation with the student is in Hungarian.
+- **Ask before installing anything.** The machine has Docker Desktop, git, make, Python 3.11, uv, kubectl and gh. Every other tool runs from a container (toolbox). If that is not enough, ask first.
+- **What can only be done on a user interface** is requested from the student: exact steps, and how to recognise success.
+- **Before phase 7, remind the student** to raise Docker Desktop memory to 5 GB, and wait for confirmation.
+- **Commit regularly**, in small, self-contained, green units.
+- **No AI attribution in commits or PRs**: no `Co-Authored-By`, "Generated with" or similar line. AI usage is documented in `docs/ai/` instead.
+- Pushing branches and opening PRs is allowed. **Merging into `main` is done by the student.** Other remote changes (repository settings, deletions, force-push) need permission.
+- **Privacy**: the repository is public; the student's personal data (e-mail, local paths) must not get into files, logs or evidence.
+- **Resource limits**: 8 GB RAM, about 3.8 GiB for the Docker VM, about 27 GB free disk. Recalculate the plan's memory budget before adding a component.
+- Delete a Docker volume, image or cluster only if it belongs to this project. The machine holds other projects' volumes: **`docker system prune` and `docker volume prune` are forbidden.**
 
-## 3. Mérnöki elvek
+## 3. Engineering principles
 
-- **SOLID, clean code**: portok és adapterek; a domain nem importál keretrendszert, adatbázist vagy HTTP-t. Kis, egyfelelősségű modulok, beszédes nevek. A komment a „miért"-et mondja el.
-- **YAGNI**: absztrakció csak valós második megvalósításhoz vagy teszthelyettesítéshez.
-- **Típusok**: Python `mypy --strict`, TypeScript `strict`. Nincs `Any`/`any` indoklás nélkül.
-- **Teszt**: a viselkedés és a tesztje ugyanabban a commitban van. Hibajavítás előtt bukó teszt. Instabil tesztet javítunk, nem újrafuttatunk.
-- **Migráció**: csak expand/contract, mert az alkalmazás visszaállításakor a régi kódnak is futnia kell az új sémán.
-- **12-factor**: konfiguráció környezeti változóból, állapotmentes folyamatok, log a stdoutra.
+- **SOLID, clean code**: ports and adapters; the domain imports no framework, database or HTTP. Small single-responsibility modules, expressive names. A comment explains "why".
+- **YAGNI**: an abstraction needs a real second implementation or a test substitute.
+- **Types**: Python `mypy --strict`, TypeScript `strict`. No `Any`/`any` without justification.
+- **Tests**: behaviour and its test are in the same commit. A failing test precedes a bug fix. Flaky tests are fixed, not re-run.
+- **Migrations**: expand/contract only, because after an application rollback the old code must run on the new schema.
+- **12-factor**: configuration from environment variables, stateless processes, logs to stdout.
 
-## 4. DevOps-elvek
+## 4. DevOps principles
 
-- **Minden Gitben**: kézi `kubectl edit`/`apply` az alkalmazásra tilos; a változás útja PR, CI, Flux.
-- **Egyszer buildelünk**: pontosan az az artifact megy prodba, ami stagingen futott. Image-hivatkozás csak digesttel; `latest` sehol.
-- **Pinelés**: lockfile minden nyelvhez; alapimage digesttel; GitHub Action teljes commit SHA-val; letöltött bináris SHA-256 ellenőrzéssel. A verziót a fázis elején hivatalos forrásból ellenőrizd, emlékezetből ne írd be.
-- **Legkisebb jogosultság**: workflow-nként `permissions`; konténer non-root, read-only rootfs, minden capability eldobva; NetworkPolicy alapból tilt.
-- **Titok**: telepítéskor, klaszterenként generált; sem Gitben, sem OpenTofu state-ben. Új titok felvételekor frissítsd a `docs/security.md` leltárát.
-- **Idempotencia**: minden `make` cél és Ansible-playbook újrafuttatható; a második futás `changed=0`.
-- **Megfigyelhetőség a funkcióval együtt készül**: új végponthoz vagy feladattípushoz metrika, strukturált log és korrelációs azonosító jár.
-- **Ellenőrzést nem kapcsolunk ki**: kivétel csak indoklással és lejárati dátummal (pl. `.trivyignore.yaml`).
+- **Everything in Git**: manual `kubectl edit`/`apply` of the application is forbidden; a change goes through PR, CI and Flux.
+- **Build once**: exactly the artifact that ran on staging goes to prod. Images are referenced by digest; `latest` is never used.
+- **Pinning**: a lockfile for every language; base images by digest; GitHub Actions by full commit SHA; downloaded binaries by SHA-256. Verify versions from an official source at the start of the phase; never write them from memory.
+- **Least privilege**: `permissions` per workflow; non-root containers, read-only root filesystem, all capabilities dropped; default-deny NetworkPolicy.
+- **Secrets**: generated per cluster at installation; neither in Git nor in OpenTofu state. Update the inventory in `docs/security.md` when adding one.
+- **Idempotence**: every `make` target and Ansible playbook can be re-run; the second run is `changed=0`.
+- **Observability ships with the feature**: a new endpoint or job type comes with a metric, a structured log and a correlation ID.
+- **Checks are not switched off**: exceptions need a justification and an expiry date (e.g. `.trivyignore.yaml`).
 
-## 5. Munkafolyamat
+## 5. Workflow
 
-1. Olvasd el a soron következő fázist a tervben; egyszerre egy fázison dolgozz.
-2. Ág: `feat/…`, `fix/…`, `ci/…`, `docs/…` (a `main` csak PR-ból változik az alapozás után).
-3. Megvalósítás és teszt; `make check` zöld minden commit előtt.
+1. Read the next phase in the plan; work on one phase at a time.
+2. Branch: `feat/…`, `fix/…`, `ci/…`, `docs/…` (`main` changes only through PRs).
+3. Implement and test; `make check` is green before every commit.
 4. **Conventional Commits**: `type(scope): imperative summary`.
-   - Típusok: `feat fix refactor perf test docs build ci chore revert`
-   - Scope-ok: `api worker embedder web db deploy infra ci obs security docs`
-5. Fázis végén: a „Kész, ha" lista minden pontját **lefuttatott paranccsal** igazold, a kimenetet tedd a `docs/evidence/` alá, frissítsd a terv állapottábláját és az AI-naplót.
-6. Fontos döntéshez ADR: `docs/adr/NNNN-cim.md` (kontextus, döntés, alternatívák, következmények).
+   - Types: `feat fix refactor perf test docs build ci chore revert`
+   - Scopes: `api worker embedder web db deploy infra ci obs security docs`
+5. At the end of a phase, prove every "Done when" item with an **executed command**, store the output under `docs/evidence/`, update the status table of the plan and the AI log, then open a PR.
+6. Important decisions get an ADR: `docs/adr/NNNN-title.md` (context, decision, alternatives, consequences).
 
-## 6. Bizonyíték és őszinteség
+## 6. Evidence and honesty
 
-- Amit nem futtattál le, arról ne állítsd, hogy működik. Becslést és mérést mindig jelölj megkülönböztethetően.
-- A bizonyíték tartalmazza: dátum, commit SHA, parancs, nyers kimenet vagy CI-futás linkje, rövid értelmezés.
-- Sikertelen gyakorlatot is dokumentálunk a tanulsággal együtt; eredményt utólag nem szépítünk.
-- **AI-napló** (`docs/ai/log.md`): feladat, AI-javaslat, emberi döntés, ellenőrzés módja, feltárt AI-hiba. Emberi átnézést csak akkor jegyezz be, ha a hallgató ténylegesen elvégezte.
+- Do not claim that something works unless it was run. Always distinguish estimates from measurements.
+- Evidence contains: date, commit SHA, command, raw output or a CI run link, short interpretation.
+- Failed exercises are documented too, with the lesson learned; results are not embellished afterwards.
+- **AI log** (`docs/ai/log.md`): task, AI proposal, human decision, verification method, AI mistake found. Record a human review only if the student actually did it.
 
-## 7. Tervezett parancsok
+## 7. Planned commands
 
-A fázisok során készülnek el; ami még nem létezik, azt a README nem hirdetheti.
+Created during the phases; the README must not advertise what does not exist yet.
 
-| Parancs | Cél |
+| Command | Purpose |
 |---|---|
-| `make dev` | teljes fejlesztői környezet Composeban |
-| `make check` | lint, típusellenőrzés, egységteszt, titokkeresés |
-| `make test` / `make e2e` | integrációs / böngészős tesztek |
-| `make cluster` / `make cluster-down` | helyi Kubernetes létrehozása / törlése |
-| `make backup` / `make restore` / `make drill` | mentés / visszaállítás / teljes DR-gyakorlat |
-| `make load` | terhelésteszt SLO-küszöbökkel |
+| `make dev` | full development environment in Compose |
+| `make check` | lint, type check, unit tests, secret scan |
+| `make test` / `make e2e` | integration / browser tests |
+| `make cluster` / `make cluster-down` | create / delete the local Kubernetes cluster |
+| `make backup` / `make restore` / `make drill` | backup / restore / full DR exercise |
+| `make load` | load test with SLO thresholds |
