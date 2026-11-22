@@ -1,24 +1,17 @@
 import subprocess
 import sys
-from collections.abc import Iterator
 from pathlib import Path
 
-import pytest
 from alembic import command
+from alembic.autogenerate import compare_metadata
 from alembic.config import Config
+from alembic.migration import MigrationContext
 from sqlalchemy import Engine, create_engine, text
 
-from open_notebook.infrastructure.database import DatabaseProbe, build_engine
-from open_notebook.settings import Settings
+from open_notebook.infrastructure.database import DatabaseProbe
+from open_notebook.infrastructure.postgres.tables import metadata
 
 BACKEND_ROOT = Path(__file__).parents[2]
-
-
-@pytest.fixture
-def engine() -> Iterator[Engine]:
-    engine = build_engine(Settings())
-    yield engine
-    engine.dispose()
 
 
 def extensions(engine: Engine) -> set[str]:
@@ -61,3 +54,9 @@ def test_probe_reports_outage_without_raising() -> None:
     )
 
     assert not DatabaseProbe(unreachable).is_available()
+
+
+def test_migrations_and_table_definitions_agree(engine: Engine) -> None:
+    with engine.connect() as connection:
+        context = MigrationContext.configure(connection, opts={"compare_type": True})
+        assert compare_metadata(context, metadata) == []

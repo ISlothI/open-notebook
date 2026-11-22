@@ -323,7 +323,7 @@ Targets are finalised after the load measurement. A short-lived local cluster do
 The AI designs and codes, the student decides and accepts, and automated gates verify independently of both.
 
 - **Guidance:** `CLAUDE.md` as a versioned work instruction; significant decisions in ADRs.
-- **Verification:** every AI change passes the same gates; CI must be green before merging. The student sets the goals, takes the decisions and reviews when they choose to; delegated merges are recorded as such.
+- **Verification:** every AI change passes the same gates; CI must be green before merging. The student sets the goals and takes the decisions; because this is a one-person project, merges are delegated and recorded as such, and no review comments are kept.
 - **Log:** `docs/ai/log.md` – task, proposal, decision, verification, mistake found and its fix.
 - **Summary:** `docs/ai/summary.md` – what it was good for, where it erred, which gate caught which error, what had to be overruled by human decision.
 - **Privacy:** the AI receives no credentials; personal data does not enter the repository; the log contains only human reviews that really happened.
@@ -336,7 +336,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 |---|---|---|---|---|
 | 0 | Foundation | repository skeleton, toolbox, Makefile, gitleaks and commit check, ADR template | in a clean clone `make check` runs with only Docker, git and make | ☑ [evidence](evidence/phase-00-foundation.md) |
 | 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☑ [evidence](evidence/phase-01-walking-skeleton.md) |
-| 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☐ |
+| 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☑ [evidence](evidence/phase-02-note-taking.md) |
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☐ |
 | 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☐ |
 | 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☐ |
@@ -392,4 +392,3 @@ Metrics and structured logs are part of the code from phase 1; phase 9 adds thei
 |---|---|---|
 | M1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | the student is reminded before phase 7 |
 | M2 | Visibility of GHCR packages: Public | after the first release (phase 6) |
-| M3 | PR review (optional, but it is evidence for G10) | at any time |

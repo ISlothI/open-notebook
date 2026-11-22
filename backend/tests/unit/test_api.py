@@ -4,7 +4,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from sqlalchemy import create_engine
 
+from open_notebook.bootstrap import build_services
 from open_notebook.entrypoints.api.app import create_app
 from open_notebook.entrypoints.api.observability import REQUEST_ID_HEADER
 from open_notebook.infrastructure.logging import configure_logging
@@ -20,7 +22,10 @@ class FakeProbe:
 
 
 def client(available: bool = True) -> TestClient:
-    return TestClient(create_app(FakeProbe(available), version="1.2.3"))
+    # The engine connects lazily, so these tests never touch a database.
+    services = build_services(create_engine("postgresql+psycopg://nobody@127.0.0.1:1/none"))
+    app = create_app(FakeProbe(available), services, version="1.2.3")
+    return TestClient(app, base_url="https://testserver")
 
 
 def test_live_reports_version() -> None:
@@ -104,3 +109,17 @@ def test_password_does_not_appear_in_settings_repr() -> None:
 
     assert "not-a-real-password" not in repr(settings)
     assert "not-a-real-password" in settings.database_url
+
+
+def test_cross_site_changes_are_refused() -> None:
+    response = client().post("/api/auth/sign-out", headers={"Origin": "https://evil.example"})
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "cross_site_request"
+
+
+def test_protected_endpoints_need_a_session() -> None:
+    response = client().get("/api/items")
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "not_signed_in"

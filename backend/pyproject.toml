@@ -5,6 +5,7 @@ description = "Open Notebook backend: api, worker and embedder"
 requires-python = "==3.13.*"
 dependencies = [
   "alembic>=1.20,<2",
+  "argon2-cffi>=25.1,<26",
   "fastapi>=0.165,<0.166",
   "prometheus-client>=0.26,<0.27",
   "psycopg[binary]>=3.3,<4",
@@ -53,3 +54,9 @@ addopts = "--strict-markers --strict-config"
 faulthandler_timeout = 60
 faulthandler_exit_on_timeout = true
 filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["open_notebook"]
+# Composition roots are exercised by the smoke test of the running stack.
+omit = ["*/entrypoints/*/main.py"]
