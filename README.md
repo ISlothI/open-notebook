@@ -2,7 +2,7 @@
 
 A structured, Markdown-based note-taking application with page versions, trash, hybrid search and PDF export, built together with a reproducible development and operations process.
 
-> **Status:** under development, see the [project plan](docs/project-plan.md). This README describes only what already works: accounts, the library, the page editor, versions and trash.
+> **Status:** under development, see the [project plan](docs/project-plan.md). This README describes only what already works: accounts, the library, the page editor, versions, trash and search.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ Then open <https://localhost:9443>. The certificate is issued by a local CA crea
 
 | Path | Content |
 |---|---|
-| [backend/](backend/) | Python package of the api and worker, migrations, tests |
+| [backend/](backend/) | Python package of the api, worker and embedder, migrations, tests |
 | [web/](web/) | React application |
 | [compose/](compose/) | local environments and reverse proxy |
 | [.github/workflows/](.github/workflows/) | continuous integration |

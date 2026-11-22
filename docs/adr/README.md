@@ -8,4 +8,7 @@ Planned decisions are listed in the [project plan](../project-plan.md#41-main-de
 |---|---|---|
 | [0001](0001-monorepo.md) | Monorepo | Accepted |
 | [0002](0002-single-backend-image.md) | One backend codebase and image, several processes | Accepted |
+| [0003](0003-postgresql-job-queue.md) | Job queue in PostgreSQL | Accepted |
+| [0004](0004-hybrid-search-in-postgresql.md) | Hybrid search in PostgreSQL | Accepted |
+| [0005](0005-separate-embedder.md) | Separate embedder process | Accepted |
 | [0012](0012-toolbox-container.md) | Toolbox container | Accepted |

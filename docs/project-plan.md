@@ -83,7 +83,7 @@ flowchart LR
 | `web` | React, TypeScript, Vite; served statically from a non-root container | Rich editor UI, independently scalable and cacheable |
 | `api` | Python, FastAPI, SQLAlchemy, Alembic | Typed, produces an OpenAPI contract; Python also has the search and PDF ecosystem |
 | `worker` | Same image as `api`, different command | Slow work does not block the API; scales and fails separately |
-| `embedder` | Same image, different command; ONNX Runtime, `multilingual-e5-small` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
+| `embedder` | Same image, different command; ONNX Runtime, `paraphrase-multilingual-MiniLM-L12-v2` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
 | Data | PostgreSQL with pgvector | Durable data, full-text index, vectors and job queue in **one** transactional system |
 
 ### 4.1 Main decisions (to be written as ADRs)
@@ -140,8 +140,8 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 | `nodes` | tree: `id, owner_id, kind, parent_id, parent_kind, title, position, trashed_at, trash_root_id` |
 | `pages` | `node_id, current_version_id` |
 | `page_versions` | append-only: `page_id, number, title, content_md, content_hash, restored_from` |
-| `search_chunks` | `page_id, version_id, notebook_id, owner_id, text, tsv, embedding vector(384)` |
-| `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, progress, error` |
+| `search_chunks` | `page_id, ordinal, title, text, tsv, embedding vector(384)` |
+| `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, error, request_id` |
 | `exports` | `job_id, scope_node_id, state, artifact, expires_at` |
 
 **Hierarchy.** A folder lives in a folder or at the root; a notebook in a folder or at the root; a section in a notebook; a page in a section. A composite foreign key (`parent_id, parent_kind`) and a `CHECK` enforce this; the use case checks for cycles under a lock.
