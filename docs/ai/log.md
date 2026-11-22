@@ -31,3 +31,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | The priority was set by the student; the individual cuts were chosen by the assistant |
 | Verification | Every grading area still has a section and evidence in the traceability table |
 | AI mistakes found | The first plan was oversized: it contained tools that no requirement needed |
+
+## 2026-11-22 – Phase 1, walking skeleton and CI
+
+| | |
+|---|---|
+| Task | Backend and web skeleton, Compose environments, CI |
+| AI proposal | Synchronous database access, Caddy for both TLS proxy and static files, Biome instead of several linters |
+| Human decision | None needed; merging was delegated beforehand |
+| Verification | Unit, integration and smoke tests; CI on amd64; a deliberately broken PR turned red ([evidence](../evidence/phase-01-walking-skeleton.md)) |
+| AI mistakes found | The migration lock was session-scoped and stayed on the pooled connection, so a second migration waited forever; the integration test hung and revealed it. The first test dependency choice (httpx) was deprecated by the framework; the replacement's origin was checked before adopting it. Several type errors were caught by mypy |

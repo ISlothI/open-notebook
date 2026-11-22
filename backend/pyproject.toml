@@ -1,0 +1,55 @@
+[project]
+name = "open-notebook"
+version = "0.1.0"
+description = "Open Notebook backend: api, worker and embedder"
+requires-python = "==3.13.*"
+dependencies = [
+  "alembic>=1.20,<2",
+  "fastapi>=0.165,<0.166",
+  "prometheus-client>=0.26,<0.27",
+  "psycopg[binary]>=3.3,<4",
+  "pydantic-settings>=2.16,<3",
+  "sqlalchemy>=2.1,<2.2",
+  "structlog>=26.1,<27",
+  "uvicorn>=0.54,<0.55",
+]
+
+[dependency-groups]
+dev = [
+  "httpx2>=2.16,<3",
+  "mypy>=2.4,<3",
+  "pytest>=9.2,<10",
+  "pytest-cov>=7",
+  "ruff>=0.17,<0.18",
+]
+
+[project.scripts]
+open-notebook-api = "open_notebook.entrypoints.api.main:main"
+open-notebook-worker = "open_notebook.entrypoints.worker.main:main"
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "PTH", "S", "ANN", "PL", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Asserts and literal expectations are what tests consist of.
+"tests/**" = ["S101", "S603", "PLR2004"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+packages = ["open_notebook", "tests"]
+mypy_path = ["src", "."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+faulthandler_timeout = 60
+faulthandler_exit_on_timeout = true
+filterwarnings = ["error"]
