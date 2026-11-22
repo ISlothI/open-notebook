@@ -22,7 +22,7 @@ toolbox: ## Build the toolbox image with the pinned tools
 	@docker build $(TOOLBOX_BUILD_FLAGS) --target lint --tag $(TOOLBOX_IMAGE) tools/toolbox
 
 .PHONY: check
-check: secrets commits lint test-gates check-backend check-web ## Run every check that needs no running service
+check: secrets commits lint test-gates check-backend check-web check-api-types ## Run every check that needs no running service
 
 .PHONY: secrets
 secrets: toolbox ## Scan the history and pending changes for secrets
@@ -81,6 +81,11 @@ up: env ## Start the application with production images
 smoke: env ## Check the running application through the proxy
 	@$(COMPOSE) run --build --rm --no-deps smoke
 
+.PHONY: e2e
+e2e: env ## Run the browser tests against the running application
+	@mkdir -p .local/reports/e2e
+	@E2E_USER="$$(id -u):$$(id -g)" $(COMPOSE) run --build --rm --no-deps e2e
+
 .PHONY: logs
 logs: env ## Follow the logs of the running application
 	@$(COMPOSE) logs --follow --tail 100
@@ -88,6 +93,15 @@ logs: env ## Follow the logs of the running application
 .PHONY: down
 down: env ## Stop the application; the data is kept
 	@$(COMPOSE) down --remove-orphans
+
+.PHONY: api-types
+api-types: check-backend ## Generate the web client's types from the api
+	@docker build --quiet --target dev --tag open-notebook-web:dev web
+	@tools/dev/api-types.sh
+
+.PHONY: check-api-types
+check-api-types: check-backend check-web ## Verify that the generated types are up to date
+	@tools/dev/api-types.sh --check
 
 .PHONY: lock-backend
 lock-backend: ## Update the Python lockfile after changing the dependencies

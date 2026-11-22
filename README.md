@@ -2,7 +2,7 @@
 
 A structured, Markdown-based note-taking application with page versions, trash, hybrid search and PDF export, built together with a reproducible development and operations process.
 
-> **Status:** phase 1 (walking skeleton) of the [project plan](docs/project-plan.md). The parts are wired end to end, but there are no note-taking features yet; this README describes only what already works.
+> **Status:** under development, see the [project plan](docs/project-plan.md). This README describes only what already works: accounts, the library, the page editor, versions and trash.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ Then open <https://localhost:9443>. The certificate is issued by a local CA crea
 
 ## Checks
 
-`make test` runs the integration tests against a throw-away PostgreSQL.
+`make test` runs the unit and integration tests against a throw-away PostgreSQL and enforces the coverage thresholds. `make e2e` runs the browser tests against the running application (`make up`). Reports are written to `.local/reports/`.
 
 `make check` runs every gate in containers, without network access and as a non-root user. The tools come from the checksum-verified [toolbox](tools/toolbox/Dockerfile) and the development images:
 

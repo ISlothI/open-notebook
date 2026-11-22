@@ -51,3 +51,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | The student asked for phases 2–6 without stops and stated that PR comments are pointless in a one-person project |
 | Verification | 92 tests, coverage thresholds in CI, strict typing ([evidence](../evidence/phase-02-note-taking.md)) |
 | AI mistakes found | A first draft made a dependency optional only to simplify tests; it was replaced by a required dependency with a lazily connecting engine |
+
+## 2026-11-22 – Phase 3, user interface
+
+| | |
+|---|---|
+| Task | Visual identity, editor, library, versions, trash |
+| AI proposal | Milkdown after a fidelity spike; a framework-independent `PageSession` holding the autosave and conflict logic |
+| Human decision | None needed |
+| Verification | 34 unit and 20 browser tests, axe, screenshots inspected by the AI ([evidence](../evidence/phase-03-user-interface.md)) |
+| AI mistakes found | TypeScript 7 was chosen although the type generator supports only 5.x. axe found a missing main heading. Screenshots showed an overlapping button on narrow screens that no test covered. One browser test wrongly expected a draft after a save that had in fact succeeded |

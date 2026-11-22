@@ -111,6 +111,22 @@ services:
     volumes: ["proxy-data:/proxy-data:ro"]
     command: ["pytest", "-q", "-p", "no:cacheprovider", "tests/smoke"]
 
+  e2e:
+    profiles: [e2e]
+    image: open-notebook-web:e2e
+    build:
+      context: ../web
+      target: e2e
+    network_mode: service:proxy
+    init: true
+    shm_size: 512m
+    user: "${E2E_USER:-1001:1001}"
+    environment:
+      E2E_BASE_URL: https://localhost:9443
+      HOME: /tmp
+      CI: ${CI:-}
+    volumes: ["../.local/reports/e2e:/reports"]
+
 networks:
   edge:
   data:

@@ -43,7 +43,7 @@ jobs:
           retention-days: 30
 
   stack:
-    name: Production images, smoke test
+    name: Production images, smoke and browser tests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -52,6 +52,13 @@ jobs:
           persist-credentials: false
       - run: make up
       - run: make smoke
+      - run: make e2e
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: e2e-reports
+          path: .local/reports/e2e
+          retention-days: 30
       - name: Show logs
         if: failure()
         run: docker compose --env-file .env --file compose/compose.yaml logs --no-color
