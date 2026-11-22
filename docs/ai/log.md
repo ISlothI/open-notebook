@@ -81,3 +81,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | None needed |
 | Verification | 164 backend and 25 browser tests, mutation check of the SSRF test, live `SIGKILL` exercise, pages inspected visually ([evidence](../evidence/phase-05-pdf-export.md)) |
 | AI mistakes found | All worker threads took any kind of job, so a flood of indexing delayed exports by 31 s; only the live exercise showed it. A retry kept the job in the wrong state. `clip-path` is not supported by the renderer. A duration was first written into an ADR as an estimate and then replaced by a measurement |
+
+## 2026-11-22 – Phase 6, supply chain
+
+| | |
+|---|---|
+| Task | Vulnerability gate, SBOM, signing, provenance, chart release, dependency updates |
+| AI proposal | Own minimal database image instead of 27 exceptions; one expiring exception for Caddy |
+| Human decision | None needed. The planned manual step for package visibility turned out to be unnecessary |
+| Verification | Signatures and attestations verified in CI and independently on the local machine, negative checks with an unsigned artifact and a wrong signer ([evidence](../evidence/phase-06-supply-chain.md)) |
+| AI mistakes found | The first images contained 34 fixable findings that nobody had looked for before this phase. Dependabot was first configured without limits and proposed two incompatible upgrades, which CI rejected |
