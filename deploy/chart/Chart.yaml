@@ -1,0 +1,7 @@
+apiVersion: v2
+name: open-notebook
+description: Open Notebook with its database
+type: application
+# Both versions are set by the release.
+version: 0.0.0-dev
+appVersion: dev

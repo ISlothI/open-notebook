@@ -1,0 +1,74 @@
+{{- $context := dict "root" . "component" "database" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-database
+  labels: {{- include "open-notebook.labels" $context | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {{- include "open-notebook.selector" $context | nindent 4 }}
+  ports:
+    - { name: postgresql, port: 5432, targetPort: postgresql }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-database
+  labels: {{- include "open-notebook.labels" $context | nindent 4 }}
+spec:
+  serviceName: {{ .Release.Name }}-database
+  replicas: 1
+  selector:
+    matchLabels: {{- include "open-notebook.selector" $context | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "open-notebook.selector" $context | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "open-notebook.podSecurity" . | nindent 8 }}
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: postgresql
+          image: {{ .Values.images.database }}
+          env:
+            - { name: POSTGRES_DB, value: open_notebook }
+            - { name: POSTGRES_USER, value: open_notebook }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.databaseSecretName }}
+                  key: password
+          ports:
+            - { name: postgresql, containerPort: 5432 }
+          readinessProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -U, open_notebook]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -U, open_notebook]
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          securityContext:
+            {{- include "open-notebook.containerSecurity" . | nindent 12 }}
+          resources: {{- toYaml .Values.database.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql }
+            - { name: run, mountPath: /var/run/postgresql }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: run, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: {{ .Values.database.storage }}

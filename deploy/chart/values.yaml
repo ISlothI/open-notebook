@@ -1,0 +1,44 @@
+# Name of the environment in logs and metrics.
+environment: local
+
+host: open-notebook.localhost
+# A TLS certificate that exists in the namespace.
+tlsSecretName: open-notebook-tls
+# A secret with the key "password" that exists in the namespace.
+databaseSecretName: open-notebook-database
+
+# The release replaces the placeholders with digests, so a chart always means the same images.
+images:
+  backend: ghcr.io/islothi/open-notebook-backend@sha256:BACKEND_DIGEST
+  web: ghcr.io/islothi/open-notebook-web@sha256:WEB_DIGEST
+  database: ghcr.io/islothi/open-notebook-database@sha256:DATABASE_DIGEST
+
+api:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 110Mi }
+    limits: { memory: 256Mi }
+
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 80Mi }
+    limits: { memory: 512Mi }
+
+embedder:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 240Mi }
+    limits: { memory: 512Mi }
+
+web:
+  replicas: 1
+  resources:
+    requests: { cpu: 10m, memory: 20Mi }
+    limits: { memory: 96Mi }
+
+database:
+  storage: 2Gi
+  resources:
+    requests: { cpu: 50m, memory: 80Mi }
+    limits: { memory: 384Mi }

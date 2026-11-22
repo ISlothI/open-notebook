@@ -1,0 +1,176 @@
+{{- $api := dict "root" . "component" "api" }}
+{{- $worker := dict "root" . "component" "worker" }}
+{{- $embedder := dict "root" . "component" "embedder" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "open-notebook.labels" $api | nindent 4 }}
+spec:
+  selector: {{- include "open-notebook.selector" $api | nindent 4 }}
+  ports:
+    - { name: http, port: 8000, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "open-notebook.labels" $api | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels: {{- include "open-notebook.selector" $api | nindent 6 }}
+  strategy:
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: {{- include "open-notebook.labels" $api | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {{- include "open-notebook.podSecurity" . | nindent 8 }}
+      initContainers: {{- include "open-notebook.migration" . | nindent 8 }}
+      containers:
+        - name: api
+          image: {{ .Values.images.backend }}
+          command: [open-notebook-api]
+          env:
+            {{- include "open-notebook.processEnvironment" . | nindent 12 }}
+            {{- include "open-notebook.databaseEnvironment" . | nindent 12 }}
+          ports:
+            - { name: http, containerPort: 8000 }
+          startupProbe:
+            httpGet: { path: /api/health/live, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /api/health/ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /api/health/live, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          lifecycle:
+            preStop:
+              # Gives the ingress time to stop sending requests to this pod.
+              sleep: { seconds: 5 }
+          securityContext: {{- include "open-notebook.containerSecurity" . | nindent 12 }}
+          resources: {{- toYaml .Values.api.resources | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+{{- if gt (int .Values.api.replicas) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "open-notebook.labels" $api | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {{- include "open-notebook.selector" $api | nindent 6 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+  labels: {{- include "open-notebook.labels" $worker | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels: {{- include "open-notebook.selector" $worker | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "open-notebook.labels" $worker | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+    spec:
+      automountServiceAccountToken: false
+      # A started job is finished before the process ends.
+      terminationGracePeriodSeconds: 60
+      securityContext: {{- include "open-notebook.podSecurity" . | nindent 8 }}
+      initContainers: {{- include "open-notebook.migration" . | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ .Values.images.backend }}
+          command: [open-notebook-worker]
+          env:
+            {{- include "open-notebook.processEnvironment" . | nindent 12 }}
+            {{- include "open-notebook.databaseEnvironment" . | nindent 12 }}
+          ports:
+            - { name: metrics, containerPort: 9100 }
+          readinessProbe:
+            tcpSocket: { port: metrics }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: metrics }
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext: {{- include "open-notebook.containerSecurity" . | nindent 12 }}
+          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-embedder
+  labels: {{- include "open-notebook.labels" $embedder | nindent 4 }}
+spec:
+  selector: {{- include "open-notebook.selector" $embedder | nindent 4 }}
+  ports:
+    - { name: http, port: 8001, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-embedder
+  labels: {{- include "open-notebook.labels" $embedder | nindent 4 }}
+spec:
+  replicas: {{ .Values.embedder.replicas }}
+  selector:
+    matchLabels: {{- include "open-notebook.selector" $embedder | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "open-notebook.labels" $embedder | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {{- include "open-notebook.podSecurity" . | nindent 8 }}
+      containers:
+        - name: embedder
+          image: {{ .Values.images.backend }}
+          command: [open-notebook-embedder]
+          env: {{- include "open-notebook.processEnvironment" . | nindent 12 }}
+          ports:
+            - { name: http, containerPort: 8001 }
+          startupProbe:
+            httpGet: { path: /api/health/live, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /api/health/ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /api/health/live, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 10
+          securityContext: {{- include "open-notebook.containerSecurity" . | nindent 12 }}
+          resources: {{- toYaml .Values.embedder.resources | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
