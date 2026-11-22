@@ -18,6 +18,9 @@ Every new secret is recorded here in the change that introduces it.
 
 | Containers have minimal rights | non-root, read-only root filesystem, no capabilities (api, worker, web) | `compose/compose.yaml` |
 | The database is not reachable from outside | internal network, no published port | `compose/compose.yaml` |
+| Images have no fixable HIGH or CRITICAL vulnerability | Trivy gate in CI and before every push to the registry; exceptions in `.trivyignore.yaml` need a reason and an expiry date | `make scan` |
+| Code is analysed | CodeQL for Python, TypeScript and workflows | CI |
+| Releases are authentic | keyless cosign signatures, SBOM and provenance attestations | `tools/release/verify.sh` |
 | Metrics are not public | the proxy routes only `/api` to the api | smoke test |
 
 ## Known limitations

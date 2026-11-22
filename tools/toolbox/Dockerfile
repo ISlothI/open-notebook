@@ -10,7 +10,14 @@ RUN apt-get update \
   && apt-get install --yes --no-install-recommends ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 COPY tools.lock install-tools.sh /build/
-RUN bash /build/install-tools.sh /build/tools.lock "${TARGETARCH}" /opt/tools
+
+FROM fetch AS fetch-lint
+RUN bash /build/install-tools.sh /build/tools.lock "${TARGETARCH}" /opt/tools \
+  actionlint gitleaks hadolint shellcheck
+
+FROM fetch AS fetch-ops
+RUN bash /build/install-tools.sh /build/tools.lock "${TARGETARCH}" /opt/tools \
+  cosign helm kubeconform syft trivy
 
 FROM ${BASE_IMAGE} AS lint
 # Same exception as above. Review by 2027-06-30.
@@ -19,8 +26,13 @@ RUN apt-get update \
   && apt-get install --yes --no-install-recommends git \
   && rm -rf /var/lib/apt/lists/* \
   && git config --system --add safe.directory /workspace
-COPY --from=fetch /opt/tools/ /usr/local/bin/
+COPY --from=fetch-lint /opt/tools/ /usr/local/bin/
 ENV HOME=/tmp
 WORKDIR /workspace
 USER 65532:65532
 CMD ["bash"]
+
+FROM lint AS ops
+COPY --from=fetch-ops /opt/tools/ /usr/local/bin/
+# Root certificates for the tools that talk to registries.
+COPY --from=fetch /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt

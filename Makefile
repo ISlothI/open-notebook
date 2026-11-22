@@ -13,6 +13,12 @@ COMPOSE_DEV = $(COMPOSE) --file compose/compose.dev.yaml
 COMPOSE_TEST = docker compose --file compose/compose.test.yaml
 RUN_OFFLINE = docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges
 
+IMAGES := backend web database
+APP_VERSION ?= dev
+SCAN = docker run --rm --interactive --cap-drop ALL --security-opt no-new-privileges \
+	--user "$$(id -u):$$(id -g)" --volume "$(CURDIR):/workspace" \
+	--volume "$(CURDIR)/.local/trivy:/cache" open-notebook-toolbox:ops tools/checks/scan-image.sh
+
 .PHONY: help
 help: ## Show the available targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -20,6 +26,10 @@ help: ## Show the available targets
 .PHONY: toolbox
 toolbox: ## Build the toolbox image with the pinned tools
 	@docker build $(TOOLBOX_BUILD_FLAGS) --target lint --tag $(TOOLBOX_IMAGE) tools/toolbox
+
+.PHONY: toolbox-ops
+toolbox-ops: ## Build the toolbox image with the release and deployment tools
+	@docker build --quiet --target ops --tag open-notebook-toolbox:ops tools/toolbox
 
 .PHONY: check
 check: secrets commits lint test-gates check-backend check-web check-api-types ## Run every check that needs no running service
@@ -50,6 +60,19 @@ check-backend: ## Format, lint, type check and unit test the backend
 	@docker build --quiet --target dev --tag open-notebook-backend:dev backend
 	@$(RUN_OFFLINE) --env RUFF_NO_CACHE=true --env MYPY_CACHE_DIR=/tmp/mypy open-notebook-backend:dev \
 		sh -c "ruff format --check . && ruff check . && mypy && pytest -q -p no:cacheprovider tests/unit"
+
+.PHONY: check-chart
+check-chart: toolbox-ops ## Validate the Helm chart
+	@docker run --rm --cap-drop ALL --security-opt no-new-privileges --user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/workspace:ro" open-notebook-toolbox:ops tools/checks/chart.sh
+
+.PHONY: scan
+scan: toolbox-ops ## Build the production images and scan them for vulnerabilities
+	@mkdir -p .local/trivy .local/reports
+	@for name in $(IMAGES); do \
+		docker build --quiet --build-arg "VERSION=$(APP_VERSION)" --tag "open-notebook-$$name:local" "$$name" && \
+		docker save "open-notebook-$$name:local" | $(SCAN) "$$name" .local/reports || exit 1; \
+	done
 
 .PHONY: check-web
 check-web: ## Format, lint, type check and unit test the web application

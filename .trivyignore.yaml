@@ -1,0 +1,8 @@
+# Every exception needs a reason and an expiry date; after it, the gate fails again.
+vulnerabilities:
+  - id: CVE-2026-78661
+    paths: ["usr/bin/caddy"]
+    expired_at: 2027-02-28
+    statement: >-
+      Denial of service in an HTML parser inside Caddy. Our configuration serves static files and
+      parses no HTML. No Caddy release with the fix existed when this was added (2.11.9).

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Installs every tool listed for one architecture, refusing any checksum mismatch.
+# Installs the named tools for one architecture, refusing any checksum mismatch.
 set -euo pipefail
 
 lock_file=$1
 architecture=$2
 target_dir=$3
+shift 3
 
 install_tool() {
   local name=$1 sha256=$2 url=$3 work_dir
@@ -30,16 +31,12 @@ install_tool() {
 }
 
 mkdir -p "$target_dir"
-installed=0
-while read -r name tool_architecture sha256 url; do
-  case $name in '' | '#'*) continue ;; esac
-  if [ "$tool_architecture" = "$architecture" ]; then
-    install_tool "$name" "$sha256" "$url"
-    installed=$((installed + 1))
+for wanted in "$@"; do
+  entry=$(awk -v name="$wanted" -v arch="$architecture" '$1 == name && $2 == arch' "$lock_file")
+  if [ -z "$entry" ]; then
+    echo "$wanted is not pinned for architecture '$architecture'" >&2
+    exit 1
   fi
-done < "$lock_file"
-
-if [ "$installed" -eq 0 ]; then
-  echo "no tool is pinned for architecture '$architecture'" >&2
-  exit 1
-fi
+  read -r name _ sha256 url <<< "$entry"
+  install_tool "$name" "$sha256" "$url"
+done
