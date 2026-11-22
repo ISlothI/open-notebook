@@ -336,7 +336,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 |---|---|---|---|---|
 | 0 | Foundation | repository skeleton, toolbox, Makefile, gitleaks and commit check, ADR template | in a clean clone `make check` runs with only Docker, git and make | ☑ [evidence](evidence/phase-00-foundation.md) |
 | 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☑ [evidence](evidence/phase-01-walking-skeleton.md) |
-| 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☐ |
+| 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☑ [evidence](evidence/phase-02-note-taking.md) |
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☐ |
 | 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☐ |
 | 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☐ |

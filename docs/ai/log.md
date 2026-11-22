@@ -41,3 +41,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | None needed; merging was delegated beforehand |
 | Verification | Unit, integration and smoke tests; CI on amd64; a deliberately broken PR turned red ([evidence](../evidence/phase-01-walking-skeleton.md)) |
 | AI mistakes found | The migration lock was session-scoped and stayed on the pooled connection, so a second migration waited forever; the integration test hung and revealed it. The first test dependency choice (httpx) was deprecated by the framework; the replacement's origin was checked before adopting it. Several type errors were caught by mypy |
+
+## 2026-11-22 – Phase 2, note-taking API
+
+| | |
+|---|---|
+| Task | Accounts, hierarchy, versions, trash |
+| AI proposal | SQLAlchemy Core instead of an ORM; hierarchy rules also enforced by database constraints |
+| Human decision | The student asked for phases 2–6 without stops and stated that PR comments are pointless in a one-person project |
+| Verification | 92 tests, coverage thresholds in CI, strict typing ([evidence](../evidence/phase-02-note-taking.md)) |
+| AI mistakes found | A first draft made a dependency optional only to simplify tests; it was replaced by a required dependency with a lazily connecting engine |
