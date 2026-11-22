@@ -65,6 +65,13 @@ test_commit_history() {
   commit_file "$repository" two 'oops'
   commit_file "$repository" three 'fix: repair file'
   expect_in_repository rejected "$repository" commit-history.sh 'invalid commit in the middle'
+
+  local automated=$work_dir/automated
+  new_repository "$automated"
+  commit_file "$automated" one 'feat: add first file'
+  git -C "$automated" config user.name 'dependabot[bot]'
+  commit_file "$automated" two 'Bump something'
+  expect_in_repository accepted "$automated" commit-history.sh 'message written by dependabot'
 }
 
 test_secret_scan() {
