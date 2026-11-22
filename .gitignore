@@ -13,6 +13,9 @@
 *.tfvars
 !*.example.tfvars
 
+# Helm
+*.tgz
+
 # Python
 __pycache__/
 *.py[cod]

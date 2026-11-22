@@ -9,11 +9,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 # Debian removes superseded package versions, so pinning them would break rebuilds.
 # The base image digest limits the drift. Review this exception by 2027-06-30.
+# zlib1g is upgraded because the base image has a vulnerable version; pip is not needed.
 # hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends \
-    fonts-dejavu-core libharfbuzz-subset0 libpango-1.0-0 libpangoft2-1.0-0 \
-  && rm -rf /var/lib/apt/lists/*
+    fonts-dejavu-core libharfbuzz-subset0 libpango-1.0-0 libpangoft2-1.0-0 zlib1g \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /usr/local/lib/python3.13/site-packages/pip* \
+    /usr/local/lib/python3.13/ensurepip /usr/local/bin/pip*
 # The book face of the PDF (SIL Open Font License), the same family as on the web.
 ADD --checksum=sha256:8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1 --chmod=444 https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/newsreader/Newsreader%5Bopsz,wght%5D.ttf /usr/local/share/fonts/Newsreader.ttf
 ADD --checksum=sha256:796668611f80b64d5adf182fde3b6f29ed83b4e7cbec7b96937e84ac01364792 --chmod=444 https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/newsreader/Newsreader-Italic%5Bopsz,wght%5D.ttf /usr/local/share/fonts/Newsreader-Italic.ttf
