@@ -7,4 +7,5 @@ Planned decisions are listed in the [project plan](../project-plan.md#41-main-de
 | # | Decision | Status |
 |---|---|---|
 | [0001](0001-monorepo.md) | Monorepo | Accepted |
+| [0002](0002-single-backend-image.md) | One backend codebase and image, several processes | Accepted |
 | [0012](0012-toolbox-container.md) | Toolbox container | Accepted |
