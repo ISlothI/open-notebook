@@ -11,6 +11,7 @@ from open_notebook.entrypoints.api.app import create_app
 from open_notebook.entrypoints.api.observability import REQUEST_ID_HEADER
 from open_notebook.infrastructure.logging import configure_logging
 from open_notebook.settings import Settings
+from tests.fakes import FakeEmbeddings
 
 
 class FakeProbe:
@@ -23,7 +24,8 @@ class FakeProbe:
 
 def client(available: bool = True) -> TestClient:
     # The engine connects lazily, so these tests never touch a database.
-    services = build_services(create_engine("postgresql+psycopg://nobody@127.0.0.1:1/none"))
+    engine = create_engine("postgresql+psycopg://nobody@127.0.0.1:1/none")
+    services = build_services(engine, FakeEmbeddings())
     app = create_app(FakeProbe(available), services, version="1.2.3")
     return TestClient(app, base_url="https://testserver")
 

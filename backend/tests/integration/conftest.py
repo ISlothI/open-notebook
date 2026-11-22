@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterator
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -7,13 +8,44 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
 
-from open_notebook.bootstrap import build_services
+from open_notebook.application.jobs import JobProcessor
+from open_notebook.application.ports import EmbeddingProvider
+from open_notebook.bootstrap import build_handlers, build_services
 from open_notebook.entrypoints.api.app import create_app
 from open_notebook.infrastructure.database import DatabaseProbe, build_engine
+from open_notebook.infrastructure.job_metrics import JobMetrics
+from open_notebook.infrastructure.postgres.jobs import PostgresJobStore
 from open_notebook.settings import Settings
+from tests.fakes import FakeEmbeddings
 from tests.integration.notebook_client import NotebookClient
 
 BACKEND_ROOT = Path(__file__).parents[2]
+LEASE = timedelta(seconds=30)
+
+
+def empty_database(engine: Engine) -> None:
+    with engine.begin() as connection:
+        connection.execute(text("TRUNCATE users, failed_logins, jobs CASCADE"))
+
+
+def build_test_client(engine: Engine, embeddings: EmbeddingProvider) -> NotebookClient:
+    app = create_app(DatabaseProbe(engine), build_services(engine, embeddings), version="test")
+    return NotebookClient(TestClient(app, base_url="https://testserver"))
+
+
+def build_job_runner(engine: Engine, embeddings: EmbeddingProvider) -> Callable[[], int]:
+    """Plays the worker until no job is due; the result tells how many jobs ran."""
+    store = PostgresJobStore(engine)
+    processor = JobProcessor(store, build_handlers(engine, embeddings), JobMetrics())
+
+    def run() -> int:
+        count = 0
+        while job := store.claim(LEASE):
+            processor.process(job)
+            count += 1
+        return count
+
+    return run
 
 
 @pytest.fixture(scope="session")
@@ -25,16 +57,25 @@ def engine() -> Iterator[Engine]:
 
 
 @pytest.fixture
-def new_client(engine: Engine) -> Iterator[Callable[[], NotebookClient]]:
+def embeddings() -> FakeEmbeddings:
+    return FakeEmbeddings()
+
+
+@pytest.fixture
+def store(engine: Engine) -> PostgresJobStore:
+    return PostgresJobStore(engine)
+
+
+@pytest.fixture
+def run_jobs(engine: Engine, embeddings: FakeEmbeddings) -> Callable[[], int]:
+    return build_job_runner(engine, embeddings)
+
+
+@pytest.fixture
+def new_client(engine: Engine, embeddings: FakeEmbeddings) -> Callable[[], NotebookClient]:
     """Creates independent browsers talking to one api with an empty database."""
-    with engine.begin() as connection:
-        connection.execute(text("TRUNCATE users, failed_logins CASCADE"))
-    app = create_app(DatabaseProbe(engine), build_services(engine), version="test")
-
-    def build() -> NotebookClient:
-        return NotebookClient(TestClient(app, base_url="https://testserver"))
-
-    yield build
+    empty_database(engine)
+    return lambda: build_test_client(engine, embeddings)
 
 
 @pytest.fixture

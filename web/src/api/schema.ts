@@ -262,6 +262,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search */
+        get: operations["search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -377,6 +394,45 @@ export interface components {
             content: string;
             /** Base Version */
             base_version: number;
+        };
+        /** SearchBody */
+        SearchBody: {
+            mode: components["schemas"]["SearchMode"];
+            /** Hits */
+            hits: components["schemas"]["SearchHitBody"][];
+        };
+        /** SearchHitBody */
+        SearchHitBody: {
+            /**
+             * Page Id
+             * Format: uuid
+             */
+            page_id: string;
+            /** Title */
+            title: string;
+            /** Section Title */
+            section_title: string;
+            /**
+             * Notebook Id
+             * Format: uuid
+             */
+            notebook_id: string;
+            /** Notebook Title */
+            notebook_title: string;
+            /** Snippet */
+            snippet: components["schemas"]["SnippetPartBody"][];
+        };
+        /**
+         * SearchMode
+         * @enum {string}
+         */
+        SearchMode: "hybrid" | "fulltext";
+        /** SnippetPartBody */
+        SnippetPartBody: {
+            /** Text */
+            text: string;
+            /** Is Match */
+            is_match: boolean;
         };
         /** UserBody */
         UserBody: {
@@ -941,6 +997,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                notebook_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchBody"];
                 };
             };
             /** @description Validation Error */

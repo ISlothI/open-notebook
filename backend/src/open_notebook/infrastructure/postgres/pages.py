@@ -48,12 +48,23 @@ class PostgresPages:
     def current(self, page_id: UUID) -> PageVersion:
         return to_version(self._connection.execute(select_current(page_id)).mappings().one())
 
+    def find_current(self, page_id: UUID) -> PageVersion | None:
+        row = self._connection.execute(select_current(page_id)).mappings().one_or_none()
+        return to_version(row) if row else None
+
     def lock(self, page_id: UUID) -> PageVersion:
+        self._lock_row(page_id)
+        return self.current(page_id)
+
+    def lock_if_exists(self, page_id: UUID) -> PageVersion | None:
+        self._lock_row(page_id)
+        return self.find_current(page_id)
+
+    def _lock_row(self, page_id: UUID) -> None:
         # Locking first and reading in a second statement sees what a waited-for save committed.
         self._connection.execute(
             select(pages.c.node_id).where(pages.c.node_id == page_id).with_for_update()
         )
-        return self.current(page_id)
 
     def append(
         self, page_id: UUID, number: int, title: str, content: str, restored_from: int | None

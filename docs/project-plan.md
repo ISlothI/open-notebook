@@ -83,7 +83,7 @@ flowchart LR
 | `web` | React, TypeScript, Vite; served statically from a non-root container | Rich editor UI, independently scalable and cacheable |
 | `api` | Python, FastAPI, SQLAlchemy, Alembic | Typed, produces an OpenAPI contract; Python also has the search and PDF ecosystem |
 | `worker` | Same image as `api`, different command | Slow work does not block the API; scales and fails separately |
-| `embedder` | Same image, different command; ONNX Runtime, `multilingual-e5-small` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
+| `embedder` | Same image, different command; ONNX Runtime, `paraphrase-multilingual-MiniLM-L12-v2` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
 | Data | PostgreSQL with pgvector | Durable data, full-text index, vectors and job queue in **one** transactional system |
 
 ### 4.1 Main decisions (to be written as ADRs)
@@ -140,8 +140,8 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 | `nodes` | tree: `id, owner_id, kind, parent_id, parent_kind, title, position, trashed_at, trash_root_id` |
 | `pages` | `node_id, current_version_id` |
 | `page_versions` | append-only: `page_id, number, title, content_md, content_hash, restored_from` |
-| `search_chunks` | `page_id, version_id, notebook_id, owner_id, text, tsv, embedding vector(384)` |
-| `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, progress, error` |
+| `search_chunks` | `page_id, ordinal, title, text, tsv, embedding vector(384)` |
+| `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, error, request_id` |
 | `exports` | `job_id, scope_node_id, state, artifact, expires_at` |
 
 **Hierarchy.** A folder lives in a folder or at the root; a notebook in a folder or at the root; a section in a notebook; a page in a section. A composite foreign key (`parent_id, parent_kind`) and a `CHECK` enforce this; the use case checks for cycles under a lock.
@@ -338,7 +338,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 | 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☑ [evidence](evidence/phase-01-walking-skeleton.md) |
 | 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☑ [evidence](evidence/phase-02-note-taking.md) |
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☑ [evidence](evidence/phase-03-user-interface.md) |
-| 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☐ |
+| 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☑ [evidence](evidence/phase-04-search.md) |
 | 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☐ |
 | 6 | Supply chain | multi-platform images, scanning, SBOM, signing, chart publishing | `cosign verify` succeeds; unsigned artifact fails | ☐ |
 | 7 | Kubernetes | charts, k3d, Ansible, OpenTofu, NetworkPolicy | `make cluster` works from scratch; second run makes no changes | ☐ |

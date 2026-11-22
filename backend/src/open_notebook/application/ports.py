@@ -5,9 +5,11 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from open_notebook.application.jobs import JobOutbox
 from open_notebook.domain.accounts import User
 from open_notebook.domain.library import Node, NodeKind
 from open_notebook.domain.pages import PageVersion, VersionSummary
+from open_notebook.domain.search import Chunk, SearchHit, Vector
 
 
 class NodeRepository(Protocol):
@@ -44,6 +46,10 @@ class PageRepository(Protocol):
     def lock(self, page_id: UUID) -> PageVersion:
         """The current version; concurrent saves wait until the transaction ends."""
 
+    def find_current(self, page_id: UUID) -> PageVersion | None: ...
+
+    def lock_if_exists(self, page_id: UUID) -> PageVersion | None: ...
+
     def append(
         self, page_id: UUID, number: int, title: str, content: str, restored_from: int | None
     ) -> PageVersion: ...
@@ -72,6 +78,21 @@ class AccountRepository(Protocol):
     def clear_failed_logins(self, key: bytes) -> None: ...
 
 
+class SearchIndex(Protocol):
+    def replace_chunks(
+        self, page_id: UUID, chunks: list[Chunk], vectors: list[Vector] | None
+    ) -> None: ...
+
+    def find(
+        self,
+        owner_id: UUID,
+        query: str,
+        vector: Vector | None,
+        notebook_id: UUID | None,
+        limit: int,
+    ) -> list[SearchHit]: ...
+
+
 class Transaction(Protocol):
     @property
     def nodes(self) -> NodeRepository: ...
@@ -81,6 +102,12 @@ class Transaction(Protocol):
 
     @property
     def accounts(self) -> AccountRepository: ...
+
+    @property
+    def search(self) -> SearchIndex: ...
+
+    @property
+    def jobs(self) -> JobOutbox: ...
 
 
 class TransactionFactory(Protocol):
@@ -96,3 +123,24 @@ class PasswordHasher(Protocol):
 
 class Clock(Protocol):
     def __call__(self) -> datetime: ...
+
+
+class EmbeddingUnavailableError(Exception):
+    """The embedder cannot answer now."""
+
+
+class EmbeddingProvider(Protocol):
+    """Raises EmbeddingUnavailableError."""
+
+    def embed_query(self, query: str) -> Vector: ...
+
+    def embed_passages(self, passages: list[str]) -> list[Vector]: ...
+
+
+class PageChunker(Protocol):
+    def chunk(self, title: str, content: str) -> list[Chunk]:
+        """At least one chunk, so that an empty page is found by its title."""
+
+
+class IndexingObserver(Protocol):
+    def indexed(self, lag_seconds: float) -> None: ...

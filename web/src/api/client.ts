@@ -6,6 +6,8 @@ export type Item = components["schemas"]["NodeBody"];
 export type Kind = components["schemas"]["NodeKind"];
 export type Page = components["schemas"]["PageBody"];
 export type Version = components["schemas"]["VersionBody"];
+export type SearchResults = components["schemas"]["SearchBody"];
+export type SearchHit = components["schemas"]["SearchHitBody"];
 export type User = components["schemas"]["UserBody"];
 
 /** An answer of the api that tells what was wrong. */
@@ -88,6 +90,8 @@ export const api = {
   versions: (id: string) => call(http.GET("/api/pages/{page_id}/versions", page(id))),
   version: (id: string, number: number) =>
     call(http.GET("/api/pages/{page_id}/versions/{number}", version(id, number))),
+  search: (q: string, notebook_id: string | null, signal: AbortSignal) =>
+    call(http.GET("/api/search", { params: { query: { q, notebook_id } }, signal })),
   restoreVersion: (id: string, number: number) =>
     call(http.POST("/api/pages/{page_id}/versions/{number}/restore", version(id, number))),
 };

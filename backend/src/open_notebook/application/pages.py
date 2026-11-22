@@ -5,6 +5,7 @@ from uuid import UUID
 import structlog
 
 from open_notebook.application.access import require_active_page
+from open_notebook.application.indexing import request_indexing
 from open_notebook.application.ports import Transaction, TransactionFactory
 from open_notebook.domain.errors import NotFoundError
 from open_notebook.domain.library import clean_title
@@ -31,6 +32,7 @@ def save_version(
         return SaveResult(current, created=False)
     version = tx.pages.append(current.page_id, current.number + 1, title, content, restored_from)
     tx.nodes.rename(current.page_id, title)
+    request_indexing(tx.jobs, current.page_id)
     log.info("page_saved", page_id=str(version.page_id), number=version.number)
     return SaveResult(version, created=True)
 

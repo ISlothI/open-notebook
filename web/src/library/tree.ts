@@ -65,6 +65,10 @@ export class Library {
     );
   }
 
+  notebooks(): Item[] {
+    return this.depthFirst(null).filter((item) => item.kind === "notebook");
+  }
+
   private depthFirst(parentId: string | null): Item[] {
     return this.children(parentId).flatMap((item) => [item, ...this.depthFirst(item.id)]);
   }

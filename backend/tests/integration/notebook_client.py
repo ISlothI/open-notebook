@@ -74,3 +74,13 @@ class NotebookClient:
             f"/api/items/{item['id']}/move",
             json={"parent_id": parent["id"] if parent else None, "position": position},
         )
+
+    def search(self, query: str, notebook: Json | None = None) -> Json:
+        params = {"q": query} | ({"notebook_id": notebook["id"]} if notebook else {})
+        response = self.http.get("/api/search", params=params)
+        assert response.status_code == 200, response.text
+        body: Json = response.json()
+        return body
+
+    def found_titles(self, query: str, notebook: Json | None = None) -> list[str]:
+        return [hit["title"] for hit in self.search(query, notebook)["hits"]]

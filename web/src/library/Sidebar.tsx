@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, LogOut, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { NavLink } from "react-router";
 import { api, type Item, type User } from "../api/client";
@@ -15,7 +15,9 @@ import { useLibrary } from "./LibraryContext";
 
 const text = messages.library;
 
-export function Sidebar({ user, activeSectionId }: { user: User; activeSectionId?: string }) {
+type Props = { user: User; activeSectionId?: string; onSearch: () => void };
+
+export function Sidebar({ user, activeSectionId, onSearch }: Props) {
   const { library, create } = useLibrary();
   const drop = useDropTarget(null);
   const rootItems = library.children(null);
@@ -26,6 +28,11 @@ export function Sidebar({ user, activeSectionId }: { user: User; activeSectionId
         <Logo />
         <span>{messages.appName}</span>
       </div>
+      <button type="button" className="search-button" onClick={onSearch}>
+        <Search size={15} aria-hidden="true" />
+        <span>{messages.search.open}</span>
+        <kbd>{messages.search.shortcut}</kbd>
+      </button>
       <div className="column-heading">
         <h2>{text.title}</h2>
         <Menu

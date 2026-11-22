@@ -70,6 +70,22 @@ services:
       timeout: 5s
       retries: 12
 
+  embedder:
+    <<: *hardening
+    image: open-notebook-backend:local
+    command: ["open-notebook-embedder"]
+    environment:
+      ON_ENVIRONMENT: compose
+    networks: [data]
+    # Only to share the image build; search works without the embedder.
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8001/api/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   web:
     <<: *hardening
     image: open-notebook-web:local

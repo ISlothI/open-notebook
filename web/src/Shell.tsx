@@ -6,6 +6,7 @@ import { useLibrary } from "./library/LibraryContext";
 import { PageList } from "./library/PageList";
 import { Sidebar } from "./library/Sidebar";
 import { messages } from "./messages";
+import { SearchDialog } from "./search/SearchDialog";
 import { EmptyState } from "./ui/EmptyState";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 
@@ -16,6 +17,7 @@ export function Shell({ user }: { user: User }) {
   const { pageId, sectionId } = useParams();
   const { pathname } = useLocation();
   const [columnsOpen, setColumnsOpen] = useState(() => !window.matchMedia(NARROW_SCREEN).matches);
+  const [searching, setSearching] = useState(false);
   const section = library.get(sectionId ?? library.get(pageId)?.parent_id);
 
   useEffect(() => {
@@ -24,6 +26,18 @@ export function Shell({ user }: { user: User }) {
       setColumnsOpen(false);
     }
   }, [pageId]);
+
+  useEffect(() => {
+    const openSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+        event.preventDefault();
+        setSearching(true);
+      }
+    };
+    // Captures, because the editor has its own use for the same keys.
+    document.addEventListener("keydown", openSearch, { capture: true });
+    return () => document.removeEventListener("keydown", openSearch, { capture: true });
+  }, []);
 
   return (
     <div className={columnsOpen ? "shell" : "shell columns-closed"}>
@@ -38,7 +52,7 @@ export function Shell({ user }: { user: User }) {
       </button>
       {columnsOpen && (
         <div className="columns">
-          <Sidebar user={user} activeSectionId={section?.id} />
+          <Sidebar user={user} activeSectionId={section?.id} onSearch={() => setSearching(true)} />
           {section && <PageList section={section} />}
         </div>
       )}
@@ -47,6 +61,7 @@ export function Shell({ user }: { user: User }) {
           <Outlet />
         </ErrorBoundary>
       </main>
+      {searching && <SearchDialog onClose={() => setSearching(false)} />}
     </div>
   );
 }

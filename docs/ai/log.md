@@ -61,3 +61,13 @@ Assistant: Claude Code (Claude Opus 5.5). Human reviews are recorded only if the
 | Human decision | None needed |
 | Verification | 34 unit and 20 browser tests, axe, screenshots inspected by the AI ([evidence](../evidence/phase-03-user-interface.md)) |
 | AI mistakes found | TypeScript 7 was chosen although the type generator supports only 5.x. axe found a missing main heading. Screenshots showed an overlapping button on narrow screens that no test covered. One browser test wrongly expected a draft after a save that had in fact succeeded |
+
+## 2026-11-22 – Phase 4, search
+
+| | |
+|---|---|
+| Task | Job queue, indexing, embedder, hybrid search |
+| AI proposal | e5-small as embedding model, `tokenizers` library |
+| Human decision | None needed |
+| Verification | Quality thresholds fixed before measuring; 144 backend and 23 browser tests; live outage exercise ([evidence](../evidence/phase-04-search.md)) |
+| AI mistakes found | The planned model failed the quality thresholds and was replaced after a measured comparison. The tokenizer library took 285 MiB, found by measuring memory. A first fake embedding made all unrelated texts identical, so a test passed and failed for the wrong reasons. One commit was made without waiting for the result of `make check`; CI rejected it |

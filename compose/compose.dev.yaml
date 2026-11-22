@@ -11,6 +11,9 @@ services:
     build: { target: dev }
     volumes: ["../backend/src:/app/src:ro"]
 
+  embedder:
+    image: open-notebook-backend:dev
+
   migrate:
     image: open-notebook-backend:dev
     build: { target: dev }

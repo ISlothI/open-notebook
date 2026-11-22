@@ -7,6 +7,7 @@ from open_notebook.bootstrap import build_services
 from open_notebook.entrypoints.api.app import create_app
 from open_notebook.infrastructure.build_info import publish_build_info
 from open_notebook.infrastructure.database import DatabaseProbe, build_engine
+from open_notebook.infrastructure.embedding_client import build_embeddings
 from open_notebook.infrastructure.logging import configure_logging
 from open_notebook.settings import Settings
 
@@ -18,7 +19,8 @@ def build() -> FastAPI:
     configure_logging(settings, SERVICE)
     publish_build_info(SERVICE, settings.version)
     engine = build_engine(settings)
-    return create_app(DatabaseProbe(engine), build_services(engine), settings.version)
+    services = build_services(engine, build_embeddings(settings.embedder_url))
+    return create_app(DatabaseProbe(engine), services, settings.version)
 
 
 def main() -> None:

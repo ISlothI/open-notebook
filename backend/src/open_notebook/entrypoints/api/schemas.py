@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from open_notebook.domain.accounts import User
 from open_notebook.domain.library import Node, NodeKind
 from open_notebook.domain.pages import PageVersion, VersionSummary
+from open_notebook.domain.search import SearchMode, SearchResults
 
 
 class Credentials(BaseModel):
@@ -112,3 +113,26 @@ class ErrorBody(BaseModel):
     code: str
     message: str
     current: PageBody | None = None
+
+
+class SnippetPartBody(BaseModel):
+    text: str
+    is_match: bool
+
+
+class SearchHitBody(BaseModel):
+    page_id: UUID
+    title: str
+    section_title: str
+    notebook_id: UUID
+    notebook_title: str
+    snippet: list[SnippetPartBody]
+
+
+class SearchBody(BaseModel):
+    mode: SearchMode
+    hits: list[SearchHitBody]
+
+    @classmethod
+    def of(cls, results: SearchResults) -> Self:
+        return cls.model_validate(results, from_attributes=True)

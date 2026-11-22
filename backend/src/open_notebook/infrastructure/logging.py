@@ -5,10 +5,10 @@ import sys
 
 import structlog
 
-from open_notebook.settings import Settings
+from open_notebook.settings import ProcessSettings
 
 
-def configure_logging(settings: Settings, service: str) -> None:
+def configure_logging(settings: ProcessSettings, service: str) -> None:
     def add_service_fields(
         _logger: structlog.typing.WrappedLogger,
         _method: str,
@@ -45,3 +45,5 @@ def configure_logging(settings: Settings, service: str) -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(settings.log_level)
+    # Logs every request of the client at INFO, which duplicates our own events.
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
