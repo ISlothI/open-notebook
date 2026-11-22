@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -35,6 +37,18 @@ def test_migrations_run_up_and_down(engine: Engine) -> None:
 
     command.upgrade(config, "head")
     command.upgrade(config, "head")
+
+
+def test_concurrent_migrations_wait_for_each_other(engine: Engine) -> None:
+    command.downgrade(Config(str(BACKEND_ROOT / "alembic.ini")), "base")
+
+    processes = [
+        subprocess.Popen([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=BACKEND_ROOT)
+        for _ in range(3)
+    ]
+
+    assert [process.wait(timeout=30) for process in processes] == [0, 0, 0]
+    assert {"vector", "unaccent"} <= extensions(engine)
 
 
 def test_probe_reports_running_database(engine: Engine) -> None:
