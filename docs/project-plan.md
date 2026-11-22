@@ -338,7 +338,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 | 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☑ [evidence](evidence/phase-01-walking-skeleton.md) |
 | 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☑ [evidence](evidence/phase-02-note-taking.md) |
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☑ [evidence](evidence/phase-03-user-interface.md) |
-| 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☐ |
+| 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☑ [evidence](evidence/phase-04-search.md) |
 | 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☐ |
 | 6 | Supply chain | multi-platform images, scanning, SBOM, signing, chart publishing | `cosign verify` succeeds; unsigned artifact fails | ☐ |
 | 7 | Kubernetes | charts, k3d, Ansible, OpenTofu, NetworkPolicy | `make cluster` works from scratch; second run makes no changes | ☐ |
