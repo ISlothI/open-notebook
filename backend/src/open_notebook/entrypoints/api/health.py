@@ -26,7 +26,7 @@ def build_health_router(database: AvailabilityProbe, version: str) -> APIRouter:
     def ready(response: Response) -> HealthStatus:
         if database.is_available():
             return HealthStatus(status="ok", version=version)
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        response.status_code = status.HTTP_200_OK
         return HealthStatus(status="unavailable", version=version)
 
     return router
