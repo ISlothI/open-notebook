@@ -212,7 +212,7 @@ This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefor
 
 **Development:** `git clone` → `make dev`. The target creates a gitignored `.env` with random values, builds the images, migrates and loads sample data. Hot reload for api and web; health checks and start order in Compose. It runs behind the reverse proxy with TLS, so the development path mirrors the deployed one.
 
-**Toolbox:** one image with checksum-verified, pinned tools (k3d, helm, flux, tofu, ansible, cosign, syft, trivy, gitleaks, k6, kubeconform, promtool, actionlint). The same image runs locally and in CI. Mounting the Docker socket grants administrator-level access to the host; this is acceptable only on a development machine and is recorded in `docs/security.md`.
+**Toolbox:** one multi-stage image definition with checksum-verified, pinned tools, used both locally and in CI. The `lint` target holds the check tools (gitleaks, actionlint, hadolint, shellcheck); the `ops` target adds the deployment tools (k3d, helm, flux, tofu, ansible, cosign, syft, trivy, k6, kubeconform, promtool) in the phases that need them. Only `ops` gets the Docker socket, whose mounting grants administrator-level access to the host; this is acceptable only on a development machine and is recorded in `docs/security.md`.
 
 ## 9. Testing and CI
 
@@ -342,7 +342,7 @@ Status: ☐ planned · ◐ in progress · ☑ verified
 
 | # | Phase | Main result | Done when | Status |
 |---|---|---|---|---|
-| 0 | Foundation | repository skeleton, toolbox, Makefile, gitleaks and commit check, ADR template | in a clean clone `make check` runs with only Docker, git and make | ☐ |
+| 0 | Foundation | repository skeleton, toolbox, Makefile, gitleaks and commit check, ADR template | in a clean clone `make check` runs with only Docker, git and make | ☑ [evidence](evidence/phase-00-foundation.md) |
 | 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☐ |
 | 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☐ |
 | 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☐ |

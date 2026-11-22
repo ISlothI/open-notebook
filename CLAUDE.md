@@ -54,7 +54,7 @@ Approved addition: minimal sign-in (e-mail, password, session). Anything beyond 
 - **Commit regularly**, in small, self-contained, green units.
 - **No AI attribution in commits or PRs**: no `Co-Authored-By`, "Generated with" or similar line. AI usage is documented in `docs/ai/` instead.
 - Pushing branches and opening PRs is allowed. **Merging into `main` is done by the student.** Other remote changes (repository settings, deletions, force-push) need permission.
-- **Privacy**: the repository is public; the student's personal data (e-mail, local paths) must not get into files, logs or evidence.
+- **Privacy**: the repository is public; the student's personal data (e-mail, local paths) must not get into files, logs or evidence. Commits use the GitHub noreply address set in the clone's local git config.
 - **Resource limits**: 8 GB RAM, about 3.8 GiB for the Docker VM, about 27 GB free disk. Recalculate the plan's memory budget before adding a component.
 - Delete a Docker volume, image or cluster only if it belongs to this project. The machine holds other projects' volumes: **`docker system prune` and `docker volume prune` are forbidden.**
 
