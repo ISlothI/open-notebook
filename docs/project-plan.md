@@ -1,395 +1,401 @@
-# Open Notebook – projektterv
+# Open Notebook – project plan
 
 | | |
 |---|---|
-| Állapot | Tervezet, jóváhagyásra vár |
-| Dátum | 2026-11-22 |
-| Hatókör | Az alkalmazás és a teljes DevOps-folyamat megtervezése |
+| Status | Key decisions (D1–D4) confirmed; plan under review |
+| Date | 2026-11-22 |
+| Scope | Design of the application and of the complete DevOps process |
 
-A dokumentumban szereplő memória-, teljesítmény- és időértékek **tervezési becslések**, amíg a `docs/evidence/` mérés nem támasztja alá őket.
+Memory, performance and time figures in this document are **design estimates** until a measurement in `docs/evidence/` supports them.
 
-## Tartalom
+## Contents
 
-1. [Cél és hatókör](#1-cél-és-hatókör)
-2. [Keretfeltételek](#2-keretfeltételek)
-3. [Felhasználói folyamatok](#3-felhasználói-folyamatok)
-4. [Architektúra](#4-architektúra)
-5. [Adatmodell és üzleti szabályok](#5-adatmodell-és-üzleti-szabályok)
-6. [Háttérfeladatok, keresés, PDF](#6-háttérfeladatok-keresés-pdf)
-7. [Felhasználói élmény és arculat](#7-felhasználói-élmény-és-arculat)
-8. [Repository és helyi környezet](#8-repository-és-helyi-környezet)
-9. [Tesztelés és CI](#9-tesztelés-és-ci)
-10. [Ellátási lánc és titokkezelés](#10-ellátási-lánc-és-titokkezelés)
-11. [Telepítés, környezetek, GitOps](#11-telepítés-környezetek-gitops)
-12. [IaC és konfigurációkezelés](#12-iac-és-konfigurációkezelés)
-13. [Megfigyelhetőség és SLO](#13-megfigyelhetőség-és-slo)
-14. [Megbízhatóság és helyreállítás](#14-megbízhatóság-és-helyreállítás)
-15. [AI-támogatott munkafolyamat](#15-ai-támogatott-munkafolyamat)
-16. [Megvalósítási fázisok](#16-megvalósítási-fázisok)
-17. [Követelmények nyomon követése](#17-követelmények-nyomon-követése)
-18. [Kockázatok](#18-kockázatok)
-19. [Nyitott döntések és felületen végzendő lépések](#19-nyitott-döntések-és-felületen-végzendő-lépések)
+1. [Goal and scope](#1-goal-and-scope)
+2. [Constraints](#2-constraints)
+3. [User flows](#3-user-flows)
+4. [Architecture](#4-architecture)
+5. [Data model and business rules](#5-data-model-and-business-rules)
+6. [Background jobs, search, PDF](#6-background-jobs-search-pdf)
+7. [User experience and identity](#7-user-experience-and-identity)
+8. [Repository and local environment](#8-repository-and-local-environment)
+9. [Testing and CI](#9-testing-and-ci)
+10. [Supply chain and secrets](#10-supply-chain-and-secrets)
+11. [Deployment, environments, GitOps](#11-deployment-environments-gitops)
+12. [IaC and configuration management](#12-iac-and-configuration-management)
+13. [Observability and SLOs](#13-observability-and-slos)
+14. [Reliability and recovery](#14-reliability-and-recovery)
+15. [AI-assisted workflow](#15-ai-assisted-workflow)
+16. [Implementation phases](#16-implementation-phases)
+17. [Requirements traceability](#17-requirements-traceability)
+18. [Risks](#18-risks)
+19. [Decisions and manual steps](#19-decisions-and-manual-steps)
 
-## 1. Cél és hatókör
+## 1. Goal and scope
 
-Az Open Notebook strukturált, Markdown-alapú jegyzetelő, amelyben a jegyzet nem vész el (verziók, lomtár), jelentés alapján is megtalálható (hibrid keresés), és igényes PDF-ként elvihető.
+Open Notebook is a structured, Markdown-based note-taking application in which notes are not lost (versions, trash), can be found by meaning (hybrid search), and can be taken away as a well-designed PDF.
 
-**Benne van:** a hat specifikált funkciócsoport és a kiírás teljes DevOps-köre.
+**In scope:** the six specified feature groups, minimal sign-in, and the full DevOps scope of the assignment.
 
-**Nincs benne:** valós idejű közös szerkesztés, megosztás, fájlcsatolmány, mobilalkalmazás, publikus felhős üzemeltetés, e-mail-küldés. Ezek egy fő számára túl nagyok, vagy az értékelt képességekhez nem tesznek hozzá.
+**Out of scope:** real-time collaboration, sharing, file attachments, mobile apps, public cloud hosting, e-mail delivery. They are too large for one person or do not add to the assessed capabilities.
 
-## 2. Keretfeltételek
+## 2. Constraints
 
-| Tény (felmérve 2026-11-22) | Tervezési következmény |
+| Fact (surveyed 2026-11-22) | Design consequence |
 |---|---|
-| Apple Silicon (arm64), 8 GB RAM | Könnyű komponensek, rögzített memóriakeret |
-| Docker VM: 8 CPU, kb. 3,8 GiB | A klaszternek ebben futnia kell; 5 GB kényelmesebb |
-| kb. 27 GB szabad lemez | Karcsú image-ek, rövid megőrzési idők |
-| Nincs Homebrew, Node, Helm, OpenTofu, Ansible | Az eszközök verziózott **toolbox konténerből** futnak, a gépre semmi sem települ |
-| Publikus, üres GitHub-repó | Ingyenes Actions, GHCR és nyilvános attestation használható |
-| Az értékelő környezete ismeretlen | Elvárás csak Docker, git és make; image-ek `amd64` és `arm64` platformra |
+| Apple Silicon (arm64), 8 GB RAM | Lightweight components, fixed memory budget |
+| Docker VM: 8 CPUs, about 3.8 GiB | The cluster must fit; 5 GB is comfortable |
+| About 27 GB free disk | Slim images, short retention |
+| No Homebrew, Node, Helm, OpenTofu or Ansible | Tools run from a versioned **toolbox container**; nothing is installed on the host |
+| Public, empty GitHub repository | Free Actions, GHCR and public attestations are available |
+| The evaluator's environment is unknown | Only Docker, git and make are required; images for `amd64` and `arm64` |
 
-## 3. Felhasználói folyamatok
+## 3. User flows
 
-| # | Folyamat | Lépések | Automatizált igazolás |
+| # | Flow | Steps | Automated verification |
 |---|---|---|---|
-| F1 | Írás, verziózás, visszaállítás | mappa, notebook, szakasz, oldal létrehozása → két mentés → verziók összevetése → az első visszaállítása új verzióként | Playwright, API-teszt |
-| F2 | Keresés jelentés alapján | mentés → worker indexel → más szavakkal megfogalmazott keresés megtalálja → szűrés notebookra | Playwright, keresésminőség-teszt |
-| F3 | Notebook exportja | export indítása → állapotkövetés → letöltés → a PDF-ben tartalomjegyzék és oldalszámok | Playwright, PDF-elemző teszt |
-| F4 | Törlés és helyreállítás | notebook lomtárba → eltűnik a fából és a keresésből → visszaállítás → ismét kereshető | Playwright, API-teszt |
-| **H1** | Worker-leállás export közben | a worker kényszerített leállítása → bérlet lejár → másik példány befejezi; nincs dupla eredmény | Integrációs teszt, klasztergyakorlat |
-| **H2** | Embedder kiesése | a keresés teljes szöveges módra vált és jelzi → a mentés működik → helyreállás után az elmaradt indexelés pótlódik | Integrációs teszt, klasztergyakorlat |
-| **H3** | Szerkesztési ütközés | két lap ugyanazt az oldalt menti → a második `409`-et kap → mindkét szöveg megmarad, a felhasználó dönt | API-teszt, Playwright |
-| **H4** | Teljes klasztervesztés | klaszter törlése → újraépítés kódból → adatvisszaállítás mentésből → ellenőrzés | DR-gyakorlat mért RTO/RPO-val |
+| F1 | Write, version, restore | create folder, notebook, section, page → two saves → compare versions → restore the first as a new version | Playwright, API test |
+| F2 | Search by meaning | save → worker indexes → a query in different words finds it → filter by notebook | Playwright, search quality test |
+| F3 | Export a notebook | start export → follow status → download → the PDF has a table of contents and page numbers | Playwright, PDF parsing test |
+| F4 | Delete and recover | notebook to trash → disappears from the tree and search → restore → searchable again | Playwright, API test |
+| **R1** | Worker crash during export | kill the worker → lease expires → another instance finishes; no duplicate result | Integration test, cluster exercise |
+| **R2** | Embedder outage | search falls back to full-text and says so → saving keeps working → missed indexing catches up after recovery | Integration test, cluster exercise |
+| **R3** | Edit conflict | two tabs save the same page → the second gets `409` → both texts are kept, the user decides | API test, Playwright |
+| **R4** | Total cluster loss | delete cluster → rebuild from code → restore data from backup → verify | DR exercise with measured RTO/RPO |
 
-## 4. Architektúra
+## 4. Architecture
 
 ```mermaid
 flowchart LR
-  U[Böngésző] -->|HTTPS| T[Traefik<br/>TLS, útválasztás]
-  T -->|"/"| W[web<br/>statikus SPA]
+  U[Browser] -->|HTTPS| T[Traefik<br/>TLS, routing]
+  T -->|"/"| W[web<br/>static SPA]
   T -->|"/api"| A[api<br/>FastAPI]
   A -->|SQL| P[(PostgreSQL<br/>pgvector)]
-  A -->|keresési vektor| E[embedder<br/>ONNX]
-  K[worker<br/>index, export, takarítás] -->|feladat, adat| P
-  K -->|szövegvektorok| E
-  PR[Prometheus] -.->|metrikák| A & K & E
-  L[Alloy, Loki] -.->|logok| A & K & E
+  A -->|query vector| E[embedder<br/>ONNX]
+  K[worker<br/>index, export, cleanup] -->|jobs, data| P
+  K -->|text vectors| E
+  PR[Prometheus] -.->|metrics| A & K & E
+  L[Alloy, Loki] -.->|logs| A & K & E
   G[Grafana] --> PR & L
 ```
 
-| Komponens | Technológia | Miért |
+| Component | Technology | Why |
 |---|---|---|
-| `web` | React, TypeScript, Vite; statikus kiszolgálás non-root konténerből | Gazdag szerkesztői felület, külön skálázható és gyorsítótárazható |
-| `api` | Python, FastAPI, SQLAlchemy, Alembic | Típusos, OpenAPI-szerződést ad; a Python a keresés és a PDF ökoszisztémája is |
-| `worker` | Ugyanaz a Python-kódbázis, külön belépési pont és image | A lassú munka nem foglalja az API-t; külön skálázható és hibázhat |
-| `embedder` | ONNX Runtime, `multilingual-e5-small` (kvantált) | Magyarul is működik, CPU-n fut; a modell környezetenként egyszer van memóriában |
-| Adat | PostgreSQL pgvectorral | Tartós adat, teljes szöveges index, vektor és feladatsor **egy** tranzakciós rendszerben |
+| `web` | React, TypeScript, Vite; served statically from a non-root container | Rich editor UI, independently scalable and cacheable |
+| `api` | Python, FastAPI, SQLAlchemy, Alembic | Typed, produces an OpenAPI contract; Python also has the search and PDF ecosystem |
+| `worker` | Same Python codebase, separate entry point and image | Slow work does not block the API; scales and fails separately |
+| `embedder` | ONNX Runtime, `multilingual-e5-small` (quantised) | Handles multilingual notes on CPU; the model is in memory once per environment |
+| Data | PostgreSQL with pgvector | Durable data, full-text index, vectors and job queue in **one** transactional system |
 
-### 4.1 Fő döntések (ADR-ként készülnek)
+### 4.1 Main decisions (to be written as ADRs)
 
-| ADR | Döntés | Elvetett alternatíva és ok |
+| ADR | Decision | Rejected alternative and reason |
 |---|---|---|
-| 0001 | Monorepó | Több repó: egy főnél csak szinkronizációs teher |
-| 0002 | Moduláris Python-mag két belépési ponttal | Mikroszolgáltatások: nincs független csapat vagy kiadási ütem |
-| 0003 | PostgreSQL-alapú feladatsor (`SKIP LOCKED`, bérlet) | Redis/RabbitMQ: plusz állapot és memória; elveszne a mentéssel közös tranzakció |
-| 0004 | pgvector és PostgreSQL FTS, RRF-összevonás | Elasticsearch/Qdrant: a memóriakeretet meghaladná, kettős írást okozna |
-| 0005 | Külön embedder szolgáltatás | Modell az api-ban és a workerben: dupla memória, nincs tiszta hibahatár |
-| 0006 | PDF: WeasyPrint | Headless Chromium: nagy image és memória; a WeasyPrint natívan ad oldalszámos tartalomjegyzéket |
-| 0007 | Kész PDF a PostgreSQL-ben, lejárattal, port mögött | Objektumtár: rövid életű, kis fájlokhoz külön állapotos rendszer. A port miatt S3-ra cserélhető |
-| 0008 | Flux CD | Argo CD: nagyobb memóriaigény a felülete miatt. A Flux natívan ellenőriz cosign-aláírást, kezel függőséget és automatikus visszagörgetést |
-| 0009 | A kiadás egysége aláírt OCI Helm chart, benne image-digestek | Külön mozgatott image-tagek: nem garantált az összetartozás |
-| 0010 | Telepítéskor generált titkok | SOPS/Sealed Secrets: privát kulcs nélkül az értékelő nem tudná reprodukálni a környezetet |
-| 0011 | Rétegek: Ansible (gazda, k3d) → OpenTofu (klaszteralap) → Flux (alkalmazás) | Minden egy eszközben: összemosott életciklusok; a klaszterre épülő provider nem konfigurálható ugyanabban a tervben megbízhatóan |
-| 0012 | Toolbox konténer | Gépre telepített eszközök: nem reprodukálható, és a gépre telepítést kerüljük |
-| 0013 | Munkamenet-süti és tulajdonosi szűrés (D1 jóváhagyásától függ) | Külső identitásszolgáltató: aránytalan |
+| 0001 | Monorepo | Several repositories: only synchronisation overhead for one person |
+| 0002 | Modular Python core with two entry points | Microservices: no independent teams or release cadence |
+| 0003 | PostgreSQL job queue (`SKIP LOCKED`, leases) | Redis/RabbitMQ: extra state and memory; loses the shared transaction with the save |
+| 0004 | pgvector and PostgreSQL FTS, RRF fusion | Elasticsearch/Qdrant: exceeds the memory budget, causes dual writes |
+| 0005 | Separate embedder service | Model inside api and worker: double memory, no clean failure boundary |
+| 0006 | PDF with WeasyPrint | Headless Chromium: large image and memory; WeasyPrint natively supports a paginated table of contents |
+| 0007 | Finished PDFs in PostgreSQL with expiry, behind a port | Object storage: a separate stateful system for short-lived small files. The port allows switching to S3 |
+| 0008 | Flux CD | Argo CD: higher memory use because of its UI. Flux natively verifies cosign signatures, handles dependencies and automatic rollback |
+| 0009 | The unit of release is a signed OCI Helm chart containing image digests | Separately moving image tags: no guarantee that they belong together |
+| 0010 | Secrets generated at installation | SOPS/Sealed Secrets: the evaluator could not reproduce the environment without the private key |
+| 0011 | Layers: Ansible (host, k3d) → OpenTofu (cluster base) → Flux (application) | Everything in one tool: mixed life cycles; a provider depending on the cluster cannot be configured reliably in the plan that creates it |
+| 0012 | Toolbox container | Host-installed tools: not reproducible, and host installation is avoided |
+| 0013 | Session cookie and ownership filtering | External identity provider: disproportionate |
 
-### 4.2 Kódszerkezet
+### 4.2 Code structure
 
-A backend portokra és adapterekre épül; a függés mindig befelé mutat, amit `import-linter` szabály kényszerít ki a CI-ban.
+The backend uses ports and adapters; dependencies always point inwards, enforced in CI by an `import-linter` rule.
 
 ```text
-domain/          entitások, értékobjektumok, szabályok (tiszta Python)
-application/     használati esetek, portok (Protocol): PageRepository, JobQueue,
+domain/          entities, value objects, rules (pure Python)
+application/     use cases, ports (Protocol): PageRepository, JobQueue,
                  EmbeddingProvider, DocumentRenderer, ArtifactStore, Clock
-infrastructure/  adapterek: postgres, embedder kliens, weasyprint
-entrypoints/     api (FastAPI), worker, cli (migráció, admin)
+infrastructure/  adapters: postgres, embedder client, weasyprint
+entrypoints/     api (FastAPI), worker, cli (migration, admin)
 ```
 
-Minden új export- vagy feladattípus új kezelő regisztrálásával adható hozzá, a feldolgozó ciklus módosítása nélkül (nyílt/zárt elv).
+A new export or job type is added by registering a handler, without changing the processing loop (open/closed principle).
 
-### 4.3 Memóriakeret (becslés)
+### 4.3 Memory budget (estimate)
 
-| Elem | MiB |
+| Item | MiB |
 |---|---:|
-| k3s vezérlősík, Traefik | 550 |
-| Flux (4 vezérlő) | 180 |
+| k3s control plane, Traefik | 550 |
+| Flux (4 controllers) | 180 |
 | Prometheus, Grafana, Loki, Alloy, kube-state-metrics | 580 |
 | prod: PostgreSQL, api ×2, worker, embedder, web | 835 |
-| staging: ugyanez, api ×1 | 705 |
-| Docker VM alapfogyasztás | 350 |
-| **Összesen** | **3200** |
+| staging: the same with api ×1 | 705 |
+| Docker VM baseline | 350 |
+| **Total** | **3200** |
 
-A 3,8 GiB-os keretbe belefér, de kevés tartalékkal. Az E2E- és a teljes körű gyakorlatok ezért CI-futtatón is lefutnak; helyben `PROFILE=lite` módban a staging leskálázható.
+This fits in 3.8 GiB with little headroom. E2E tests and full exercises therefore also run on CI runners; locally, `PROFILE=lite` scales staging down.
 
-## 5. Adatmodell és üzleti szabályok
+## 5. Data model and business rules
 
-| Tábla | Tartalom |
+| Table | Content |
 |---|---|
-| `users`, `sessions` | fiók (Argon2id jelszókivonat), kivonatolt munkamenet-azonosító |
-| `nodes` | fa: `id, owner_id, kind, parent_id, parent_kind, title, position, trashed_at, trash_root_id` |
+| `users`, `sessions` | account (Argon2id password hash), hashed session identifier |
+| `nodes` | tree: `id, owner_id, kind, parent_id, parent_kind, title, position, trashed_at, trash_root_id` |
 | `pages` | `node_id, current_version_id` |
-| `page_versions` | csak bővülő: `page_id, number, title, content_md, content_hash, restored_from` |
+| `page_versions` | append-only: `page_id, number, title, content_md, content_hash, restored_from` |
 | `search_chunks` | `page_id, version_id, notebook_id, owner_id, text, tsv, embedding vector(384)` |
 | `jobs` | `kind, payload, dedupe_key, state, attempts, run_after, leased_until, progress, error` |
 | `exports` | `job_id, scope_node_id, state, artifact, expires_at` |
 
-**Hierarchia.** Mappa mappában vagy gyökérben; notebook mappában vagy gyökérben; szakasz notebookban; oldal szakaszban. A szabályt összetett idegen kulcs (`parent_id, parent_kind`) és `CHECK` biztosítja, a körmentességet a használati eset ellenőrzi zárolás alatt.
+**Hierarchy.** A folder lives in a folder or at the root; a notebook in a folder or at the root; a section in a notebook; a page in a section. A composite foreign key (`parent_id, parent_kind`) and a `CHECK` enforce this; the use case checks for cycles under a lock.
 
-**Verziók.**
-- Minden mentés új, változtathatatlan verzió. Az azonos tartalmú ismételt kérés nem hoz létre új verziót (idempotencia).
-- A mentés tartalmazza az alapverziót; eltérésnél `409 Conflict`, a szerver semmit sem ír felül.
-- A visszaállítás új verziót hoz létre a régi tartalommal, így maga is visszavonható.
-- A szerkesztő tétlenségkor automatikusan ment; a még nem mentett szöveg helyi piszkozatként túléli a lapbezárást. Az idővonal a közeli verziókat csoportosítja.
+**Versions.**
+- Every save is a new, immutable version. A repeated request with identical content creates no new version (idempotence).
+- A save carries its base version; on mismatch the server answers `409 Conflict` and overwrites nothing.
+- Restoring creates a new version with the old content, so it can itself be undone.
+- The editor saves automatically when idle; unsaved text survives closing the tab as a local draft. The timeline groups versions close in time.
 
-**Lomtár.**
-- A törlés a teljes részfát egy `trash_root_id` alá sorolja; a lomtár csak a gyökereket mutatja.
-- A korábban külön törölt elem megtartja saját gyökerét, ezért a szülő visszaállítása nem hozza vissza.
-- Ha a visszaállítandó elem szülője a lomtárban van, az API `409 parent_trashed` választ ad, és a felület új helyet kínál.
-- 30 nap után a worker véglegesen töröl. A lomtárban lévő tartalom nem kereshető.
+**Trash.**
+- Deleting puts the whole subtree under one `trash_root_id`; the trash shows only the roots.
+- An item deleted separately earlier keeps its own root, so restoring the parent does not bring it back.
+- If the parent of the item to restore is in the trash, the API answers `409 parent_trashed` and the UI offers a new location.
+- The worker deletes permanently after 30 days. Trashed content is not searchable.
 
-## 6. Háttérfeladatok, keresés, PDF
+**Access.** Every query is filtered by owner; accessing another user's item returns `404`. The session cookie is `HttpOnly`, `Secure` and `SameSite`; state-changing requests are CSRF-protected, and sign-in attempts are rate-limited.
 
-**Feladatsor.** A feladat a kiváltó művelettel **azonos tranzakcióban** jön létre. A worker `FOR UPDATE SKIP LOCKED` zárolással vesz ki feladatot, `LISTEN/NOTIFY` ébreszti, bérletet tart és szívverést küld. Hiba esetén exponenciális várakozás véletlen szórással; a próbálkozások után `dead` állapot, amely metrikában és riasztásban látszik. A végrehajtás legalább egyszeri, ezért minden kezelő idempotens. `SIGTERM` esetén nem vesz fel új munkát, és visszaadja a bérletet.
+## 6. Background jobs, search, PDF
 
-**Indexelés.** Mentés → `index_page` feladat (oldalanként összevonva) → Markdown-tagolás címsorok szerint → vektorok → a régi darabok cseréje egy tranzakcióban, csak ha még mindig az a legfrissebb verzió.
+**Job queue.** A job is created in the **same transaction** as the triggering operation. The worker claims jobs with `FOR UPDATE SKIP LOCKED`, is woken by `LISTEN/NOTIFY`, holds a lease and sends heartbeats. On failure it backs off exponentially with jitter; after the last attempt the job becomes `dead`, visible in a metric and an alert. Execution is at-least-once, so every handler is idempotent. On `SIGTERM` the worker takes no new work and returns its lease.
 
-**Keresés.** Párhuzamosan fut a teljes szöveges (magyar és angol szótövezés, ékezetfüggetlen) és a vektoros (koszinusz) lekérdezés; az eredményt Reciprocal Rank Fusion egyesíti, kiemelt részlettel. Kezdetben pontos vektorkeresés, mert a felhasználónkénti darabszám kicsi; HNSW-index csak mérés alapján. Az embedder hibája vagy időtúllépése esetén `mode: "fulltext"` és jelzés a felületen.
+**Indexing.** Save → `index_page` job (coalesced per page) → Markdown is chunked by headings → vectors → old chunks are replaced in one transaction, only if the version is still the latest.
 
-**Keresésminőség.** Rögzített magyar/angol mintakészlet; a CI elbukik, ha a recall@5 vagy az MRR a küszöb alá esik.
+**Search.** Full-text (Hungarian and English stemming, accent-insensitive, because notes may be in either language) and vector (cosine) queries run in parallel; Reciprocal Rank Fusion merges them, with highlighted snippets. Vector search is exact at first because the number of chunks per user is small; an HNSW index is added only based on measurement. If the embedder fails or times out, the response has `mode: "fulltext"` and the UI shows it.
 
-**PDF-export.** `queued → running (haladás %) → succeeded | failed → expired`. Markdown → HTML (nyers HTML tiltva, kimenet tisztítva) → WeasyPrint. Címlap, oldalszámos tartalomjegyzék, PDF-könyvjelzők, élőfej. A megjelenítő **semmilyen külső erőforrást nem tölthet be** (SSRF-védelem). A letöltési link aláírt és lejár; a fájlt a takarító feladat törli. A tartalom az indításkori verziók pillanatképe.
+**Search quality.** A fixed Hungarian/English sample set; CI fails if recall@5 or MRR drops below the threshold.
 
-## 7. Felhasználói élmény és arculat
+**PDF export.** `queued → running (progress %) → succeeded | failed → expired`. Markdown → HTML (raw HTML disabled, output sanitised) → WeasyPrint. Cover, table of contents with page numbers, PDF bookmarks, running header. The renderer **may not load any external resource** (SSRF protection). The download link is signed and expires; a cleanup job deletes the file. The content is a snapshot of the versions at the time of the request.
 
-**Alapgondolat: „nyitott lap, csendes tér".** Az Apple-től a nagy levegő, a pontos tipográfia, az áttetsző rétegek és a visszafogott mozgás jön; a saját hang a papír és a tinta melegsége.
+## 7. User experience and identity
 
-- **Logó:** nyitott füzet két íves lapja, amelyek negatív terében „O" betű rajzolódik ki; a gerincnél egy könyvjelzőnyi színes csík. SVG, egyszínű és favicon változat.
-- **Színek:** meleg papírfehér és mély tintakék alap, egyetlen élénk hangsúlyszín (cinóber könyvjelző). Sötét módban „éjjeli íróasztal" árnyalatok. Minden pár WCAG AA kontrasztú.
-- **Betűk:** felületen rendszerbetű; oldalcímekben és a PDF-ben saját kiszolgálású, szabad licencű könyvbetű.
-- **Elrendezés:** három hasáb (könyvtár, oldallista, szerkesztő), összecsukható; fókuszmód; keskeny képernyőn egymásra csúszó nézetek.
-- **Kulcsfelületek:** ⌘K kereső és parancspaletta, fa húzással rendezve, verzióidővonal összevetéssel, lomtár, exportközpont, beszédes üres állapotok.
-- **Szerkesztő:** Markdown-natív WYSIWYG (Milkdown) és nyers Markdown mód. A Markdown oda-vissza alakításának hűségét a 3. fázis elején próba igazolja; ha nem megfelelő, CodeMirror élő előnézettel.
-- **Állapotok:** mentési jelzés, kapcsolat nélküli piszkozat, degradált keresés, ütközésfeloldás – minden hibának van emberi szövege és következő lépése.
-- **Akadálymentesség:** teljes billentyűzetkezelés, látható fókusz, `prefers-reduced-motion`, axe-ellenőrzés az E2E-tesztekben.
+**Core idea: "open page, quiet space".** Generous space, precise typography, translucent layers and restrained motion come from Apple; the product's own voice is the warmth of paper and ink.
 
-## 8. Repository és helyi környezet
+- **Logo:** two curved pages of an open notebook whose negative space forms an "O"; a bookmark-sized strip of colour at the spine. SVG, monochrome and favicon variants.
+- **Colours:** warm paper white and deep ink blue, with a single vivid accent (vermilion bookmark). Dark mode uses "desk at night" shades. Every pair has WCAG AA contrast.
+- **Type:** system font for the UI; a self-hosted, freely licensed book face for page titles and the PDF.
+- **Layout:** three collapsible columns (library, page list, editor); focus mode; stacked sliding views on narrow screens.
+- **Key surfaces:** ⌘K search and command palette, drag-and-drop tree, version timeline with comparison, trash, export centre, expressive empty states.
+- **Editor:** Markdown-native WYSIWYG (Milkdown) and a raw Markdown mode. A spike at the start of phase 3 verifies Markdown round-trip fidelity; if inadequate, CodeMirror with live preview.
+- **States:** save indicator, offline draft, degraded search, conflict resolution – every error has a human message and a next step.
+- **Accessibility:** full keyboard operation, visible focus, `prefers-reduced-motion`, axe checks in the E2E tests.
+- **Language:** English, from a single message catalogue so that further languages can be added.
+
+## 8. Repository and local environment
 
 ```text
 .
 ├── CLAUDE.md  README.md  Makefile  VERSION
 ├── .github/workflows/
 ├── backend/            Python: api, worker (src/, tests/, migrations/, uv.lock)
-├── embedder/           Python: ONNX-szolgáltatás
-├── web/                React-alkalmazás, Playwright-tesztek
-├── compose/            fejlesztői környezet, reverse proxy
+├── embedder/           Python: ONNX service
+├── web/                React application, Playwright tests
+├── compose/            development environment, reverse proxy
 ├── deploy/
-│   ├── charts/         open-notebook (alkalmazás), open-notebook-data (PostgreSQL, mentés)
-│   ├── platform/       megfigyelhetőség
-│   ├── envs/           staging/, prod/   ← a kívánt állapot
-│   └── flux/           Flux-források és függőségek
+│   ├── charts/         open-notebook (application), open-notebook-data (PostgreSQL, backup)
+│   ├── platform/       observability
+│   ├── envs/           staging/, prod/   ← the desired state
+│   └── flux/           Flux sources and dependencies
 ├── infra/
-│   ├── ansible/        gazdagép-előkészítés, k3d, üzemeltetési playbookok
+│   ├── ansible/        host preparation, k3d, operations playbooks
 │   └── tofu/           cluster/, github/
-├── observability/      szabályok, dashboardok, promtool-tesztek
-├── load/               k6-forgatókönyvek
-├── tools/toolbox/      pinelt eszközöket tartalmazó image
+├── observability/      rules, dashboards, promtool tests
+├── load/               k6 scenarios
+├── tools/toolbox/      image with pinned tools
 └── docs/               adr/ ai/ evidence/ runbooks/ incidents/ architecture.md security.md slo.md
 ```
 
-**Fejlesztés:** `git clone` → `make dev`. A cél véletlen értékű, gitignore-olt `.env`-et készít, felépíti az image-eket, migrál, és betölti a mintaadatokat. Automatikus újratöltés az api-nál és a webnél; állapotellenőrzések és indítási sorrend Composeban. TLS-sel a reverse proxy mögött, hogy a fejlesztői útvonal a telepítettet tükrözze.
+**Development:** `git clone` → `make dev`. The target creates a gitignored `.env` with random values, builds the images, migrates and loads sample data. Hot reload for api and web; health checks and start order in Compose. It runs behind the reverse proxy with TLS, so the development path mirrors the deployed one.
 
-**Toolbox:** egyetlen image, checksummal ellenőrzött, rögzített verziójú eszközökkel (k3d, helm, flux, tofu, ansible, cosign, syft, trivy, gitleaks, k6, kubeconform, promtool, actionlint). Helyben és a CI-ban ugyanez fut. A Docker-socket felcsatolása a gazdagépen rendszergazdai jogkört jelent; ez csak fejlesztői gépen elfogadott, a `docs/security.md` rögzíti.
+**Toolbox:** one image with checksum-verified, pinned tools (k3d, helm, flux, tofu, ansible, cosign, syft, trivy, gitleaks, k6, kubeconform, promtool, actionlint). The same image runs locally and in CI. Mounting the Docker socket grants administrator-level access to the host; this is acceptable only on a development machine and is recorded in `docs/security.md`.
 
-## 9. Tesztelés és CI
+## 9. Testing and CI
 
-| Szint | Mit bizonyít | Eszköz |
+| Level | What it proves | Tool |
 |---|---|---|
-| Egység | domain- és alkalmazásszabályok | pytest, Vitest |
-| Architektúra | a függési irány betartása | import-linter |
-| Integráció | valódi PostgreSQL: sor, bérlet, tranzakció, keresés, tulajdonosi szűrés | pytest szolgáltatáskonténerrel |
-| Szerződés | az API megfelel az OpenAPI-leírásnak; a kliens ebből generált | Schemathesis, generált TypeScript-kliens |
-| Migráció | üres adatbázisból és az előző kiadásból is; régi kód az új sémán | Alembic, kompatibilitási teszt |
-| Keresésminőség | recall@5, MRR küszöb | rögzített mintakészlet |
-| E2E | F1–F4, H3 és akadálymentesség | Playwright, axe |
-| Telepítés | chartok érvényessége, biztonsági beállítások | helm lint, kubeconform, Trivy config |
-| Megfigyelhetőség | riasztási szabályok helyes működése | promtool test rules |
-| Tiszta környezet | üres futtatón klaszter, telepítés, füstteszt | k3d a CI-ban |
+| Unit | domain and application rules | pytest, Vitest |
+| Architecture | dependency direction | import-linter |
+| Integration | real PostgreSQL: queue, lease, transaction, search, ownership filtering | pytest with a service container |
+| Contract | the API matches its OpenAPI description; the client is generated from it | Schemathesis, generated TypeScript client |
+| Migration | from an empty database and from the previous release; old code on the new schema | Alembic, compatibility test |
+| Search quality | recall@5 and MRR thresholds | fixed sample set |
+| E2E | F1–F4, R3 and accessibility | Playwright, axe |
+| Deployment | chart validity, security settings | helm lint, kubeconform, Trivy config |
+| Observability | correctness of alert rules | promtool test rules |
+| Clean room | cluster, deployment and smoke test on an empty runner | k3d in CI |
 
-Lefedettségi küszöb: domain és application réteg 90%, backend összesen 80%.
+Coverage thresholds: domain and application layers 90%, backend overall 80%.
 
-**Workflow-k**
+**Workflows**
 
-| Workflow | Indítás | Feladat |
+| Workflow | Trigger | Task |
 |---|---|---|
-| `ci` | PR, kézi | lint, típus, tesztek, image-build, vizsgálat, E2E; összesítő kötelező ellenőrzés |
-| `security` | PR, heti | CodeQL, gitleaks, függőség- és image-vizsgálat |
-| `clean-room` | PR (telepítést érintő), heti | teljes reprodukció nulláról |
-| `release` | push a `main`-re | build, vizsgálat, SBOM, aláírás, chart, staging-PR |
-| `promote` | kézi | prod-PR ugyanazzal a chartverzióval, kiadási jegyzet |
-| `drill` | kézi, havi | mentés, rombolás, visszaállítás, RTO/RPO-mérés |
+| `ci` | PR, manual | lint, types, tests, image build, scanning, E2E; aggregated required check |
+| `security` | PR, weekly | CodeQL, gitleaks, dependency and image scanning |
+| `clean-room` | PR (touching deployment), weekly | full reproduction from scratch |
+| `release` | push to `main` | build, scan, SBOM, signing, chart, staging PR |
+| `promote` | manual | prod PR with the same chart version, release notes |
+| `drill` | manual, monthly | backup, destruction, restore, RTO/RPO measurement |
 
-Teszteredmények, lefedettség, Playwright-nyomok, SBOM-ok és vizsgálati jelentések CI-artifactként elérhetők.
+Test results, coverage, Playwright traces, SBOMs and scan reports are available as CI artifacts.
 
-## 10. Ellátási lánc és titokkezelés
+## 10. Supply chain and secrets
 
 ```mermaid
 flowchart LR
-  M[merge a main-re] --> B[build amd64, arm64]
-  B --> S[Trivy: HIGH, CRITICAL kapu]
+  M[merge to main] --> B[build amd64, arm64]
+  B --> S[Trivy: HIGH, CRITICAL gate]
   S --> I[Syft SBOM]
-  I --> C[cosign keyless aláírás<br/>SBOM- és eredetigazolás]
-  C --> H[Helm chart<br/>beégetett image-digestekkel]
-  H --> HS[chart aláírása, GHCR]
-  HS --> PR[staging-PR]
-  PR --> F[Flux: aláírás-ellenőrzés, telepítés]
+  I --> C[cosign keyless signature<br/>SBOM and provenance attestation]
+  C --> H[Helm chart<br/>with embedded image digests]
+  H --> HS[signed chart in GHCR]
+  HS --> PR[staging PR]
+  PR --> F[Flux: verify signature, deploy]
 ```
 
-- **Verzió:** `VERSION` (MAJOR.MINOR) és a futás sorszáma, pl. `0.1.57`. Minden main-merge teljes értékű kiadásjelölt; a promóció nem buildel újra.
-- **Bizalmi lánc:** a Flux csak a repó `release` workflow-ja által aláírt chartot fogadja el; a chart digesttel rögzíti az image-eket, így az ellenőrzés rájuk is kiterjed.
-- **Kapuk:** javítható HIGH/CRITICAL sérülékenység megállítja a kiadást; kivétel csak indoklással és lejárattal.
-- **Negatív bizonyíték:** aláíratlan chart telepítési kísérlete dokumentáltan elbukik.
-- **Frissítés:** Dependabot a Python-, npm-, Docker- és Actions-függőségekre.
+- **Version:** `VERSION` (MAJOR.MINOR) plus the run number, e.g. `0.1.57`. Every merge to main is a full release candidate; promotion does not rebuild.
+- **Chain of trust:** Flux accepts only charts signed by this repository's `release` workflow; the chart pins images by digest, so the verification extends to them.
+- **Gates:** a fixable HIGH/CRITICAL vulnerability stops the release; exceptions need a justification and an expiry date.
+- **Negative evidence:** an attempt to deploy an unsigned chart fails, and this is documented.
+- **Updates:** Dependabot for Python, npm, Docker and Actions dependencies.
 
-**Titkok.** Nincs hosszú életű titok Gitben vagy GitHub Secretben: a GHCR-hez a futás idejű `GITHUB_TOKEN`, az aláíráshoz OIDC szolgál. Az adatbázisjelszavakat, az aláíró kulcsot és a Grafana-jelszót az OpenTofu generálja ephemeral értékként, write-only attribútummal, így a state-be sem kerülnek. Rotáció: a revízió növelése és újraindítás; kipróbált runbookkal. A gitleaks commit előtt és a CI-ban a teljes történeten fut.
+**Secrets.** There is no long-lived secret in Git or GitHub Secrets: GHCR uses the runtime `GITHUB_TOKEN`, signing uses OIDC. OpenTofu generates database passwords, the signing key and the Grafana password as ephemeral values through write-only attributes, so they do not enter the state either. Rotation: increase the revision and restart; with an exercised runbook. gitleaks runs before commits and on the full history in CI.
 
-## 11. Telepítés, környezetek, GitOps
+## 11. Deployment, environments, GitOps
 
-**Elkülönítés.** `open-notebook-staging` és `open-notebook-prod` névtér: külön adatbázis, titkok, kvóta, hosztnév, alapból tiltó NetworkPolicy és `restricted` Pod Security szint. Egy klaszterben vannak a memóriakeret miatt; a korlátot (közös vezérlősík) az ADR kimondja.
+**Separation.** `open-notebook-staging` and `open-notebook-prod` namespaces: separate database, secrets, quota, host name, default-deny NetworkPolicy and the `restricted` Pod Security level. They share one cluster because of the memory budget; an ADR states this limitation (shared control plane).
 
 | | staging | prod |
 |---|---|---|
-| Cím | `https://staging.open-notebook.localhost:8443` | `https://open-notebook.localhost:8443` |
-| api példány | 1 | 2 és PodDisruptionBudget |
-| Frissítés | automatikus PR sikeres kiadás után | kézi promóció jóváhagyott PR-ral |
-| Mentés | nincs (mintaadat) | óránként |
+| Address | `https://staging.open-notebook.localhost:8443` | `https://open-notebook.localhost:8443` |
+| api replicas | 1 | 2 with PodDisruptionBudget |
+| Update | automatic PR after a successful release | manual promotion with an approved PR |
+| Backup | none (sample data) | hourly |
 
-**Kiadási folyamat**
-1. A `release` workflow PR-t nyit, amely a `deploy/envs/staging` chartverzióját emeli. A PR ellenőrzéseit `workflow_dispatch` indítja (a `GITHUB_TOKEN` által nyitott PR magától nem indít workflow-t), majd automatikusan összeolvad. Nem kell személyes token vagy szabálymegkerülés.
-2. A Flux telepít: adat-chart → migrációs Job → alkalmazás → Helm-teszt (F1 rövidített változata).
-3. A `promote` workflow ugyanazt a verziót emeli PR-ban a prodba; előtte ellenőrzi az aláírást és a sikeres staging-állapotot.
+**Release process**
+1. The `release` workflow opens a PR that raises the chart version in `deploy/envs/staging`. Its checks are started by `workflow_dispatch` (a PR opened with `GITHUB_TOKEN` does not start workflows by itself), then it merges automatically. No personal token or rule bypass is needed.
+2. Flux deploys: data chart → migration Job → application → Helm test (a short version of F1).
+3. The `promote` workflow raises the same version in a prod PR; it first checks the signature and the successful staging state.
 
-**Visszaállítás.** Automatikus: sikertelen frissítés vagy Helm-teszt esetén a Flux visszagörget az előző kiadásra. Kézi: `git revert` a promóciós commiton. Mindkettőt szándékosan hibás kiadással próbáljuk ki. Az adatbázis nem görög vissza: az expand/contract migráció miatt az előző verzió az új sémán is fut, és migráció előtt automatikus mentés készül.
+The automatic staging merge is the only exception to "the student merges into `main`": it changes only the staging version and is enabled after the student approves the phase 8 PR.
 
-**Eltérés-kezelés.** Kézi `kubectl scale` után a Flux visszaállítja a kívánt állapotot; a kísérlet bizonyítékként rögzül.
+**Rollback.** Automatic: if an upgrade or Helm test fails, Flux rolls back to the previous release. Manual: `git revert` of the promotion commit. Both are exercised with a deliberately broken release. The database is not rolled back: thanks to expand/contract migrations the previous version runs on the new schema, and a backup is taken automatically before migrating.
 
-## 12. IaC és konfigurációkezelés
+**Drift handling.** After a manual `kubectl scale`, Flux restores the desired state; the experiment is recorded as evidence.
 
-| Réteg | Eszköz | Felelősség | Reprodukálhatóság igazolása |
+## 12. IaC and configuration management
+
+| Layer | Tool | Responsibility | Proof of reproducibility |
 |---|---|---|---|
-| Gazda | Ansible | előfeltételek, helyi CA és tanúsítvány, könyvtárak, k3d-klaszter deklaratív konfigból; mentés, visszaállítás, DR-playbook | második futás `changed=0`, CI ellenőrzi |
-| Klaszteralap | OpenTofu `cluster` | névterek, kvóták, Pod Security, titkok, TLS, Flux telepítése | `plan -detailed-exitcode` = 0 alkalmazás után |
-| GitHub | OpenTofu `github` | ágvédelem, környezetek, repó-beállítások | `plan` eltérés nélkül |
-| Alkalmazás | Flux, Helm | minden, ami a névterekben fut | Flux `Ready`, eltérés-kísérlet |
+| Host | Ansible | prerequisites, local CA and certificate, directories, k3d cluster from declarative config; backup, restore and DR playbooks | second run is `changed=0`, checked in CI |
+| Cluster base | OpenTofu `cluster` | namespaces, quotas, Pod Security, secrets, TLS, Flux installation | `plan -detailed-exitcode` = 0 after apply |
+| GitHub | OpenTofu `github` | branch protection, environments, repository settings | `plan` without differences |
+| Application | Flux, Helm | everything running in the namespaces | Flux `Ready`, drift experiment |
 
-Az OpenTofu state helyi és gitignore-olt: egy felhasználó van, a klaszter eldobható, távoli tárhely pedig külső függőség lenne. A provider-lockfile commitolt, több platform kivonatával. A `tofu test` és a Trivy a modulokat is vizsgálja.
+The OpenTofu state is local and gitignored: there is one user, the cluster is disposable, and remote storage would be an external dependency. The provider lockfile is committed with hashes for several platforms. Modules are checked with `tofu test` and Trivy.
 
-## 13. Megfigyelhetőség és SLO
+## 13. Observability and SLOs
 
-- **Metrikák:** HTTP RED; feladatsor mélysége, kora, időtartama, kimenete; keresési mód és fázisonkénti idő; embedder-idő; export-kimenet; PostgreSQL-kapcsolatok; `build_info` verzióval.
-- **Naplók:** JSON, egységes mezőkkel (`ts, level, service, version, env, request_id, job_id, event`). A `request_id` a böngészőtől a háttérfeladatig követhető. Jegyzettartalom és keresőkifejezés **nem** kerül a naplóba.
-- **Dashboardok kódból:** szolgáltatásáttekintés, SLO és hibakeret, feladatsor, kiadások.
-- **Riasztások:** többablakos hibakeret-égés, feladatsor kora, `dead` feladat, elavult mentés; mindegyikhez runbook-link és promtool-teszt. Az értesítés helyben a Prometheus/Grafana felületén látszik, külső csatorna nincs.
+- **Metrics:** HTTP RED; queue depth, age, duration and outcome; search mode and time per stage; embedder time; export outcome; PostgreSQL connections; `build_info` with version.
+- **Logs:** JSON with uniform fields (`ts, level, service, version, env, request_id, job_id, event`). The `request_id` can be followed from the browser to the background job. Note content and search terms are **not** logged.
+- **Dashboards as code:** service overview, SLO and error budget, job queue, releases.
+- **Alerts:** multi-window error budget burn, queue age, `dead` jobs, stale backup; each with a runbook link and a promtool test. Notifications appear locally on the Prometheus/Grafana UI; there is no external channel.
 
-| SLI | SLO (28 nap, kezdeti célérték) |
+| SLI | SLO (28 days, initial target) |
 |---|---|
-| Nem 5xx API-válaszok aránya | 99,5% |
-| Keresés 500 ms alatt | 95% |
-| Mentés 300 ms alatt | 99% |
-| Mentéstől kereshetőségig 30 s alatt | 95% |
-| Export sikeresen, 60 s alatt | 98% |
+| Ratio of non-5xx API responses | 99.5% |
+| Search under 500 ms | 95% |
+| Save under 300 ms | 99% |
+| Searchable within 30 s of saving | 95% |
+| Export successful within 60 s | 98% |
 
-A célokat a terheléses mérés után véglegesítjük. Rövid életű helyi klaszterben 28 napos adat nem gyűlik; ezt a bizonyíték kimondja, és a terhelési ablakra számolt megfelelést mutatja.
+Targets are finalised after the load measurement. A short-lived local cluster does not collect 28 days of data; the evidence states this and shows compliance for the load window.
 
-## 14. Megbízhatóság és helyreállítás
+## 14. Reliability and recovery
 
-- **Terhelés (k6):** alap, csúcs, tartós; a küszöbök az SLO-k. Telítési pont és szűk keresztmetszet azonosítása, legfeljebb egy mérésre alapozott javítással, előtte–utána adattal.
-- **Hibagyakorlatok:** H1, H2, adatbázis-újraindítás, hibás kiadás, betelt kvóta. Mindegyiknél hipotézis, végrehajtás, észlelés, hatás, helyreállási idő.
-- **Mentés:** óránkénti `pg_dump`, ellenőrző összeggel, a klaszteren kívüli könyvtárba (túléli a klaszter törlését); megőrzés 24 órás és 7 napi.
-- **Célok:** RPO ≤ 1 óra, RTO ≤ 15 perc, mért eredménnyel.
-- **DR-gyakorlat:** ismert adatkészlet → mentés → klaszter törlése → `make cluster` → visszaállítás → sorszám- és tartalomkivonat-egyezés → keresés és verzió-visszaállítás füstteszt. A keresőindex származtatott adat, ezért újraépíthető.
-- **Korlát:** a mentés ugyanazon a fizikai gépen van; valós üzemben külső, titkosított tárhely kellene.
-- **Incidenselemzés:** egy valóban lefolytatott gyakorlatról, hibáztatásmentesen: idővonal, hatás, kiváltó és hozzájáruló okok, mi működött, felelőssel és határidővel ellátott teendők.
+- **Load (k6):** baseline, peak, soak; thresholds are the SLOs. Identify the saturation point and bottleneck, with at most one measurement-based improvement and before/after data.
+- **Failure exercises:** R1, R2, database restart, faulty release, exhausted quota. Each has a hypothesis, execution, detection, impact and recovery time.
+- **Backup:** hourly `pg_dump` with checksum, into a directory outside the cluster (it survives cluster deletion); 24 hourly and 7 daily copies are kept.
+- **Targets:** RPO ≤ 1 hour, RTO ≤ 15 minutes, with measured results.
+- **DR exercise:** known dataset → backup → delete cluster → `make cluster` → restore → matching row counts and content hashes → smoke test of search and version restore. The search index is derived data, so it can be rebuilt.
+- **Limitation:** the backup is on the same physical machine; real operation would need external, encrypted storage.
+- **Incident review:** a blameless review of an exercise that really took place: timeline, impact, root and contributing causes, what worked, actions with owner and deadline.
 
-## 15. AI-támogatott munkafolyamat
+## 15. AI-assisted workflow
 
-Az AI tervez és kódol, a hallgató dönt és átvesz, az automatizált kapuk mindkettőjüktől függetlenül ellenőriznek.
+The AI designs and codes, the student decides and accepts, and automated gates verify independently of both.
 
-- **Irányítás:** `CLAUDE.md` mint verziózott munkautasítás; jelentős döntés ADR-ben.
-- **Ellenőrzés:** minden AI-változtatás ugyanazokon a kapukon megy át; a hallgató fázisonként PR-t néz át, és észrevételeit a PR-ban rögzíti.
-- **Napló:** `docs/ai/log.md` – feladat, javaslat, döntés, ellenőrzés, feltárt hiba és javítása.
-- **Összegzés:** `docs/ai/summary.md` – mire volt jó, hol tévedett, mely hibát melyik kapu fogta meg, mit kellett emberi döntéssel felülbírálni.
-- **Adatvédelem:** az AI titkot és személyes adatot nem kap; a naplóban csak valóban megtörtént emberi átnézés szerepel.
+- **Guidance:** `CLAUDE.md` as a versioned work instruction; significant decisions in ADRs.
+- **Verification:** every AI change passes the same gates; the student reviews a PR per phase and records remarks in it.
+- **Log:** `docs/ai/log.md` – task, proposal, decision, verification, mistake found and its fix.
+- **Summary:** `docs/ai/summary.md` – what it was good for, where it erred, which gate caught which error, what had to be overruled by human decision.
+- **Privacy:** the AI receives no credentials; personal data does not enter the repository; the log contains only human reviews that really happened.
 
-## 16. Megvalósítási fázisok
+## 16. Implementation phases
 
-Állapot: ☐ tervezett · ◐ folyamatban · ☑ igazolva
+Status: ☐ planned · ◐ in progress · ☑ verified
 
-| # | Fázis | Fő eredmény | Kész, ha | Állapot |
+| # | Phase | Main result | Done when | Status |
 |---|---|---|---|---|
-| 0 | Alapozás | repóváz, toolbox, Makefile, gitleaks és commit-ellenőrzés, ADR-sablon | tiszta klónban `make check` lefut csak Dockerrel, gittel és make-kel | ☐ |
-| 1 | Működő váz és CI | api, worker, web, PostgreSQL „végig bekötve" Composeban; `ci` workflow | `make dev` után health zöld; a CI zöld és szándékos hibára piros | ☐ |
-| 2 | Jegyzetelés | hierarchia, verziók, lomtár, (D1) belépés – API és tesztek | F1, F4, H3 API-teszt zöld; lefedettségi küszöb teljesül | ☐ |
-| 3 | Felület | arculat, logó, szerkesztő, fa, idővonal, lomtár | F1, F4, H3 Playwrighttal; axe hibátlan | ☐ |
-| 4 | Keresés | feladatsor, indexelés, embedder, hibrid keresés, ⌘K | F2, H2 teszt zöld; keresésminőségi küszöb teljesül | ☐ |
-| 5 | PDF-export | renderelő, állapot, letöltés, takarítás | F3, H1 teszt zöld; SSRF-teszt zöld | ☐ |
-| 6 | Ellátási lánc | többplatformos image, vizsgálat, SBOM, aláírás, chart-kiadás | `cosign verify` sikeres; aláíratlan elbukik | ☐ |
-| 7 | Kubernetes | chartok, k3d, Ansible, OpenTofu, NetworkPolicy | `make cluster` nulláról működik; második futás változásmentes | ☐ |
-| 8 | GitOps | Flux, staging/prod, promóció, visszagörgetés | hibás kiadás automatikusan visszaáll; `git revert` kipróbálva | ☐ |
-| 9 | Megfigyelhetőség | metrikák, naplók, dashboard, SLO, riasztás | promtool zöld; egy kérés naplója végigkövethető | ☐ |
-| 10 | Megbízhatóság | terhelés, hibagyakorlatok, DR, incidenselemzés | mért RTO/RPO; k6-jelentés; H1, H2, H4 bizonyíték | ☐ |
-| 11 | Lezárás | README, bizonyítékjegyzék, AI-összegzés, tisztakörnyezet-próba | friss klónból a README lépései szó szerint működnek | ☐ |
+| 0 | Foundation | repository skeleton, toolbox, Makefile, gitleaks and commit check, ADR template | in a clean clone `make check` runs with only Docker, git and make | ☐ |
+| 1 | Walking skeleton and CI | api, worker, web, PostgreSQL wired end to end in Compose; `ci` workflow | health is green after `make dev`; CI is green, and red on a deliberate error | ☐ |
+| 2 | Note-taking | sign-in, hierarchy, versions, trash – API and tests | F1, F4, R3 API tests green; coverage thresholds met | ☐ |
+| 3 | User interface | identity, logo, editor, tree, timeline, trash | F1, F4, R3 with Playwright; axe without violations | ☐ |
+| 4 | Search | job queue, indexing, embedder, hybrid search, ⌘K | F2, R2 tests green; search quality threshold met | ☐ |
+| 5 | PDF export | renderer, status, download, cleanup | F3, R1 tests green; SSRF test green | ☐ |
+| 6 | Supply chain | multi-platform images, scanning, SBOM, signing, chart publishing | `cosign verify` succeeds; unsigned artifact fails | ☐ |
+| 7 | Kubernetes | charts, k3d, Ansible, OpenTofu, NetworkPolicy | `make cluster` works from scratch; second run makes no changes | ☐ |
+| 8 | GitOps | Flux, staging/prod, promotion, rollback | faulty release rolls back automatically; `git revert` exercised | ☐ |
+| 9 | Observability | metrics, logs, dashboards, SLOs, alerts | promtool green; one request can be traced through the logs | ☐ |
+| 10 | Reliability | load, failure exercises, DR, incident review | measured RTO/RPO; k6 report; R1, R2, R4 evidence | ☐ |
+| 11 | Closing | README, evidence index, AI summary, clean-environment trial | the README steps work literally from a fresh clone | ☐ |
 
-A metrika és a strukturált log már az 1. fázistól a kód része; a 9. fázis a gyűjtésüket és értelmezésüket adja. A fázisok sorrendje miatt bármelyik után működő, bemutatható állapot marad.
+Metrics and structured logs are part of the code from phase 1; phase 9 adds their collection and interpretation. The order ensures that every phase ends in a working state.
 
-## 17. Követelmények nyomon követése
+## 17. Requirements traceability
 
-| Terület | Pont | Hol teljesül | Bizonyíték |
+| Area | Points | Where it is met | Evidence |
 |---|---:|---|---|
-| É1 Rendszer és architektúra | 5 | 3–6. fejezet | `docs/architecture.md`, ADR-ek, F- és H-folyamatok |
-| É2 Helyi környezet, repó | 5 | 8. fejezet | `clean-room` futás, README |
-| É3 Tesztek, CI | 9 | 9. fejezet | CI-futások, lefedettség, szándékosan piros futás |
-| É4 Artifact, biztonság, SBOM, titok | 7 | 10. fejezet | aláírás-ellenőrzés, SBOM, gitleaks, negatív próba |
-| É5 Telepítés, környezetek, visszaállítás | 9 | 11. fejezet | frissítés- és visszagörgetés-jegyzőkönyv |
-| É6 GitOps | 5 | 11. fejezet | promóciós PR-ok, eltérés-kísérlet |
-| É7 IaC, konfiguráció | 5 | 12. fejezet | `changed=0`, üres `plan` |
-| É8 Megfigyelhetőség | 7 | 13. fejezet | dashboardképek, SLO-jelentés, riasztási teszt |
-| É9 Megbízhatóság | 4 | 14. fejezet | DR-jegyzőkönyv, k6, incidenselemzés |
-| É10 AI-munkafolyamat | 4 | 15. fejezet | AI-napló és összegzés |
+| G1 System and architecture | 5 | sections 3–6 | `docs/architecture.md`, ADRs, F and R flows |
+| G2 Local environment, repository | 5 | section 8 | `clean-room` run, README |
+| G3 Tests, CI | 9 | section 9 | CI runs, coverage, deliberately red run |
+| G4 Artifacts, security, SBOM, secrets | 7 | section 10 | signature verification, SBOM, gitleaks, negative test |
+| G5 Deployment, environments, rollback | 9 | section 11 | upgrade and rollback records |
+| G6 GitOps | 5 | section 11 | promotion PRs, drift experiment |
+| G7 IaC, configuration | 5 | section 12 | `changed=0`, empty `plan` |
+| G8 Observability | 7 | section 13 | dashboard images, SLO report, alert test |
+| G9 Reliability | 4 | section 14 | DR record, k6, incident review |
+| G10 AI workflow | 4 | section 15 | AI log and summary |
 
-## 18. Kockázatok
+## 18. Risks
 
-| Kockázat | Kezelés |
+| Risk | Handling |
 |---|---|
-| Kevés memória helyben | limitek, `PROFILE=lite`, Docker 5 GB-ra emelése, teljes gyakorlat a CI-ban |
-| A hatókör túl nagy egy főnek | fázisonként működő állapot; a látványelemek az alapfunkciók után |
-| A szerkesztő torzítja a Markdownt | korai próba oda-vissza tesztekkel, kész tartalékmegoldás |
-| A modell letöltése nem elérhető | revízióra és SHA-256-ra rögzítve, image-be építve; futáskor nincs letöltés |
-| Az automatikus staging-PR mechanizmusa nem a várt módon működik | 8. fázis elején próba; tartalék: kézzel összeolvasztott PR |
-| A write-only titokkezelés provider-támogatása | 7. fázis elején próba; tartalék: klaszteren belüli generáló Job |
-| Verziók elavulása a projekt alatt | Dependabot, fázis eleji hivatalos ellenőrzés |
+| Little local memory | limits, `PROFILE=lite`, raising Docker to 5 GB, full exercises in CI |
+| Scope too large for one person | working state after each phase; visual extras come after core functions |
+| The editor distorts Markdown | early spike with round-trip tests, fallback ready |
+| Model download unavailable | pinned by revision and SHA-256, built into the image; no download at run time |
+| The automatic staging PR mechanism does not work as expected | spike at the start of phase 8; fallback: manually merged PR |
+| Provider support for write-only secrets | spike at the start of phase 7; fallback: in-cluster generator Job |
+| Versions becoming outdated during the project | Dependabot, official check at the start of each phase |
 
-## 19. Nyitott döntések és felületen végzendő lépések
+## 19. Decisions and manual steps
 
-| # | Döntés | Javaslat |
+| # | Question | Decision (student, 2026-11-22) |
 |---|---|---|
-| D1 | Legyen-e belépés? A specifikáció nem említi. | Igen, minimálisan (e-mail, jelszó, munkamenet): privát jegyzethez elvárható, és utólag drága beépíteni |
-| D2 | A felület nyelve | Magyar, szövegkatalógusból, később bővíthetően |
-| D3 | Toolbox konténer a gépre telepített eszközök helyett | Igen; a gépre semmit sem kell telepíteni |
-| D4 | Push és PR-nyitás állandó engedélye | Igen, a `main`-be olvasztás a hallgatónál marad (átnézési bizonyíték) |
+| D1 | Sign-in, which the specification does not mention | Yes, minimal: e-mail, password, session |
+| D2 | UI, code and documentation language | English |
+| D3 | Toolbox container instead of host-installed tools | Yes |
+| D4 | Standing permission to push branches and open PRs | Yes; merging into `main` is done by the student |
+| D5 | AI attribution lines in commits | Not allowed; AI usage is documented in `docs/ai/` |
 
-| # | Felületen végzendő lépés | Mikor |
+| # | Manual step on a UI | When |
 |---|---|---|
-| L1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | 7. fázis előtt (ajánlott) |
-| L2 | GHCR-csomagok láthatósága: Public | az első kiadás után (6. fázis) |
-| L3 | Fázisonkénti PR-átnézés és összeolvasztás | minden fázis végén |
+| M1 | Docker Desktop → Settings → Resources → Memory: 5 GB, Apply & restart | the student is reminded before phase 7 |
+| M2 | Visibility of GHCR packages: Public | after the first release (phase 6) |
+| M3 | PR review and merge | at the end of every phase |
